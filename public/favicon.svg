@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <rect width="32" height="32" rx="8" fill="#090D16" />
+  <path d="M7 19C7 15.6863 9.68629 13 13 13C13.5273 13 14.0371 13.0681 14.5235 13.1963C15.6322 10.1264 18.5714 8 22 8C26.4183 8 30 11.5817 30 16C30 16.3408 29.9787 16.6766 29.9372 17.0062C29.9789 17.3323 30 17.6637 30 18C30 21.866 26.866 25 23 25H11C8.79086 25 7 23.2091 7 21V19Z" fill="url(#cloudGrad)" opacity="0.3" />
+  <path d="M16 6L23 13H18V21H14V13H9L16 6Z" fill="url(#forgeGrad)" />
+  <path d="M10 24H22" stroke="#38BDF8" stroke-width="2" stroke-linecap="round" />
+  <defs>
+    <linearGradient id="cloudGrad" x1="7" y1="8" x2="30" y2="25" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#38BDF8" />
+      <stop offset="1" stop-color="#818CF8" />
+    </linearGradient>
+    <linearGradient id="forgeGrad" x1="9" y1="6" x2="23" y2="21" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#38BDF8" />
+      <stop offset="0.5" stop-color="#818CF8" />
+      <stop offset="1" stop-color="#C084FC" />
+    </linearGradient>
+  </defs>
+</svg>
