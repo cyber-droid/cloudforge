@@ -3,48 +3,49 @@ Lesson Progress and Learning Activity Repository Layer.
 
 Encapsulates transactional upserts, activity streaming, and aggregated metrics queries.
 """
+
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
-from sqlalchemy import desc, func, or_, select, update
+
+from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.course import Course, CourseEnrollment, CourseModule, EnrollmentStatus, Lesson
-from app.models.progress import ActivityType, LearningActivity, LessonProgress, LessonProgressStatus
+from app.models.course import (
+    CourseModule,
+    Lesson,
+)
+from app.models.progress import (
+    ActivityType,
+    LearningActivity,
+    LessonProgress,
+    LessonProgressStatus,
+)
 
 
 class ProgressRepository:
     """Data access methods for LessonProgress."""
 
     async def get_progress(
-        self,
-        db: AsyncSession,
-        *,
-        user_id: str,
-        lesson_id: str
+        self, db: AsyncSession, *, user_id: str, lesson_id: str
     ) -> Optional[LessonProgress]:
         """Fetch a specific lesson progress record."""
         result = await db.execute(
             select(LessonProgress)
             .options(selectinload(LessonProgress.lesson))
             .where(
-                LessonProgress.user_id == user_id,
-                LessonProgress.lesson_id == lesson_id
+                LessonProgress.user_id == user_id, LessonProgress.lesson_id == lesson_id
             )
         )
         return result.scalars().first()
 
     async def upsert_start(
-        self,
-        db: AsyncSession,
-        *,
-        user_id: str,
-        lesson_id: str
+        self, db: AsyncSession, *, user_id: str, lesson_id: str
     ) -> LessonProgress:
         """Create or update lesson progress to in_progress."""
         now = datetime.now(timezone.utc)
         record = await self.get_progress(db, user_id=user_id, lesson_id=lesson_id)
-        
+
         if not record:
             record = LessonProgress(
                 user_id=user_id,
@@ -71,7 +72,7 @@ class ProgressRepository:
         user_id: str,
         lesson_id: str,
         additional_seconds: int,
-        new_status: Optional[str] = None
+        new_status: Optional[str] = None,
     ) -> LessonProgress:
         """Increment study duration on a lesson."""
         now = datetime.now(timezone.utc)
@@ -92,7 +93,10 @@ class ProgressRepository:
             record.last_accessed_at = now
             if new_status:
                 record.status = new_status
-                if new_status == LessonProgressStatus.COMPLETED.value and not record.completed_at:
+                if (
+                    new_status == LessonProgressStatus.COMPLETED.value
+                    and not record.completed_at
+                ):
                     record.completed_at = now
 
         await db.commit()
@@ -105,7 +109,7 @@ class ProgressRepository:
         *,
         user_id: str,
         lesson_id: str,
-        additional_seconds: int = 0
+        additional_seconds: int = 0,
     ) -> LessonProgress:
         """Mark lesson as completed and set completed_at timestamp."""
         now = datetime.now(timezone.utc)
@@ -133,11 +137,7 @@ class ProgressRepository:
         return record
 
     async def get_course_lesson_progress(
-        self,
-        db: AsyncSession,
-        *,
-        user_id: str,
-        course_id: str
+        self, db: AsyncSession, *, user_id: str, course_id: str
     ) -> List[LessonProgress]:
         """Fetch all lesson progress records for a user within a specific course."""
         query = (
@@ -145,45 +145,33 @@ class ProgressRepository:
             .join(Lesson, LessonProgress.lesson_id == Lesson.id)
             .join(CourseModule, Lesson.module_id == CourseModule.id)
             .where(
-                LessonProgress.user_id == user_id,
-                CourseModule.course_id == course_id
+                LessonProgress.user_id == user_id, CourseModule.course_id == course_id
             )
         )
         result = await db.execute(query)
         return list(result.scalars().all())
 
     async def get_user_completed_lesson_count(
-        self,
-        db: AsyncSession,
-        *,
-        user_id: str
+        self, db: AsyncSession, *, user_id: str
     ) -> int:
         """Count total lessons completed by user across all courses."""
         query = select(func.count(LessonProgress.id)).where(
             LessonProgress.user_id == user_id,
-            LessonProgress.status == LessonProgressStatus.COMPLETED.value
+            LessonProgress.status == LessonProgressStatus.COMPLETED.value,
         )
         result = await db.execute(query)
         return result.scalar() or 0
 
-    async def get_total_study_seconds(
-        self,
-        db: AsyncSession,
-        *,
-        user_id: str
-    ) -> int:
+    async def get_total_study_seconds(self, db: AsyncSession, *, user_id: str) -> int:
         """Sum total learning seconds recorded across all user lesson progress."""
-        query = select(func.coalesce(func.sum(LessonProgress.time_spent_seconds), 0)).where(
-            LessonProgress.user_id == user_id
-        )
+        query = select(
+            func.coalesce(func.sum(LessonProgress.time_spent_seconds), 0)
+        ).where(LessonProgress.user_id == user_id)
         result = await db.execute(query)
         return result.scalar() or 0
 
     async def get_recently_accessed_incomplete_lesson(
-        self,
-        db: AsyncSession,
-        *,
-        user_id: str
+        self, db: AsyncSession, *, user_id: str
     ) -> Optional[LessonProgress]:
         """Find the most recently accessed incomplete lesson for continue learning."""
         query = (
@@ -195,7 +183,7 @@ class ProgressRepository:
             )
             .where(
                 LessonProgress.user_id == user_id,
-                LessonProgress.status == LessonProgressStatus.IN_PROGRESS.value
+                LessonProgress.status == LessonProgressStatus.IN_PROGRESS.value,
             )
             .order_by(desc(LessonProgress.last_accessed_at))
             .limit(1)
@@ -216,7 +204,7 @@ class ActivityRepository:
         course_id: Optional[str] = None,
         lesson_id: Optional[str] = None,
         duration_seconds: int = 0,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> LearningActivity:
         """Record an append-only learning event."""
         activity = LearningActivity(
@@ -233,18 +221,14 @@ class ActivityRepository:
         return activity
 
     async def get_recent_activities(
-        self,
-        db: AsyncSession,
-        *,
-        user_id: str,
-        limit: int = 10
+        self, db: AsyncSession, *, user_id: str, limit: int = 10
     ) -> List[LearningActivity]:
         """Fetch the most recent learning activities for student dashboard."""
         query = (
             select(LearningActivity)
             .options(
                 selectinload(LearningActivity.course),
-                selectinload(LearningActivity.lesson)
+                selectinload(LearningActivity.lesson),
             )
             .where(LearningActivity.user_id == user_id)
             .order_by(desc(LearningActivity.created_at))
@@ -254,10 +238,7 @@ class ActivityRepository:
         return list(result.scalars().all())
 
     async def get_distinct_activity_dates(
-        self,
-        db: AsyncSession,
-        *,
-        user_id: str
+        self, db: AsyncSession, *, user_id: str
     ) -> List[datetime]:
         """
         Fetch distinct UTC dates where qualifying learning activities occurred.
@@ -281,11 +262,7 @@ class ActivityRepository:
         return unique_dates
 
     async def get_daily_activity_aggregates(
-        self,
-        db: AsyncSession,
-        *,
-        user_id: str,
-        since_date: datetime
+        self, db: AsyncSession, *, user_id: str, since_date: datetime
     ) -> List[Dict[str, Any]]:
         """
         Aggregate learning events grouped by calendar date.
@@ -295,7 +272,7 @@ class ActivityRepository:
             select(LearningActivity)
             .where(
                 LearningActivity.user_id == user_id,
-                LearningActivity.created_at >= since_date
+                LearningActivity.created_at >= since_date,
             )
             .order_by(LearningActivity.created_at.asc())
         )
@@ -315,7 +292,7 @@ class ActivityRepository:
             daily_dict[day_str]["count"] += 1
             if a.activity_type == ActivityType.LESSON_COMPLETED.value:
                 daily_dict[day_str]["lessons_completed"] += 1
-            daily_dict[day_str]["time_spent_seconds"] += (a.duration_seconds or 0)
+            daily_dict[day_str]["time_spent_seconds"] += a.duration_seconds or 0
 
         return sorted(daily_dict.values(), key=lambda x: x["date"])
 

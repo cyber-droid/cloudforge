@@ -3,8 +3,10 @@ Certificate Repository.
 
 Handles querying and persisting CloudForge formative training completion certificates.
 """
+
 from datetime import datetime, timezone
 from typing import List, Optional, Tuple
+
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -27,11 +29,16 @@ class CertificateRepository:
         identifier: str,
     ) -> Optional[Certificate]:
         """Fetch certificate by UUID or serial certificate_number."""
-        query = select(Certificate).options(
-            selectinload(Certificate.training),
-            selectinload(Certificate.certification),
-        ).where(
-            (Certificate.id == identifier) | (Certificate.certificate_number == identifier)
+        query = (
+            select(Certificate)
+            .options(
+                selectinload(Certificate.training),
+                selectinload(Certificate.certification),
+            )
+            .where(
+                (Certificate.id == identifier)
+                | (Certificate.certificate_number == identifier)
+            )
         )
         result = await db.execute(query)
         return result.scalar_one_or_none()
@@ -43,10 +50,14 @@ class CertificateRepository:
         verification_code: str,
     ) -> Optional[Certificate]:
         """Fetch certificate by public verification code."""
-        query = select(Certificate).options(
-            selectinload(Certificate.training),
-            selectinload(Certificate.certification),
-        ).where(Certificate.verification_code == verification_code)
+        query = (
+            select(Certificate)
+            .options(
+                selectinload(Certificate.training),
+                selectinload(Certificate.certification),
+            )
+            .where(Certificate.verification_code == verification_code)
+        )
         result = await db.execute(query)
         return result.scalar_one_or_none()
 
@@ -58,12 +69,16 @@ class CertificateRepository:
         training_id: str,
     ) -> Optional[Certificate]:
         """Fetch existing certificate for user and training track."""
-        query = select(Certificate).options(
-            selectinload(Certificate.training),
-            selectinload(Certificate.certification),
-        ).where(
-            Certificate.user_id == user_id,
-            Certificate.training_id == training_id,
+        query = (
+            select(Certificate)
+            .options(
+                selectinload(Certificate.training),
+                selectinload(Certificate.certification),
+            )
+            .where(
+                Certificate.user_id == user_id,
+                Certificate.training_id == training_id,
+            )
         )
         result = await db.execute(query)
         return result.scalar_one_or_none()
@@ -77,10 +92,14 @@ class CertificateRepository:
         limit: int = 50,
     ) -> Tuple[List[Certificate], int]:
         """List all certificates issued to a student."""
-        query = select(Certificate).options(
-            selectinload(Certificate.training),
-            selectinload(Certificate.certification),
-        ).where(Certificate.user_id == user_id)
+        query = (
+            select(Certificate)
+            .options(
+                selectinload(Certificate.training),
+                selectinload(Certificate.certification),
+            )
+            .where(Certificate.user_id == user_id)
+        )
 
         count_query = select(func.count()).select_from(query.subquery())
         total_res = await db.execute(count_query)
@@ -104,7 +123,9 @@ class CertificateRepository:
         prefix: str = "CF",
     ) -> Certificate:
         """Create and issue a new CloudForge certificate idempotently."""
-        existing = await self.get_user_certificate_for_training(db, user_id=user_id, training_id=training_id)
+        existing = await self.get_user_certificate_for_training(
+            db, user_id=user_id, training_id=training_id
+        )
         if existing:
             return existing
 

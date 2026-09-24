@@ -1,6 +1,7 @@
 """
 Lesson Execution and Study Progress Tracking Endpoints.
 """
+
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,7 +19,7 @@ router = APIRouter()
     response_model=LessonProgressResponse,
     status_code=status.HTTP_200_OK,
     summary="Start Lesson Study",
-    description="Mark lesson as in_progress, update last_accessed_at, and record learning activity event."
+    description="Mark lesson as in_progress, update last_accessed_at, and record learning activity event.",
 )
 async def start_lesson(
     lesson_id: str,
@@ -38,7 +39,7 @@ async def start_lesson(
     response_model=LessonProgressResponse,
     status_code=status.HTTP_200_OK,
     summary="Record Lesson Study Time",
-    description="Incrementally log study duration seconds with strict boundary validation (0 <= time <= 86400s)."
+    description="Incrementally log study duration seconds with strict boundary validation (0 <= time <= 86400s).",
 )
 async def record_lesson_progress(
     lesson_id: str,
@@ -61,7 +62,7 @@ async def record_lesson_progress(
     response_model=LessonProgressResponse,
     status_code=status.HTTP_200_OK,
     summary="Complete Lesson",
-    description="Mark lesson as completed, calculate course progress, and trigger course graduation if all lessons are finished."
+    description="Mark lesson as completed, calculate course progress, and trigger course graduation if all lessons are finished.",
 )
 async def complete_lesson(
     lesson_id: str,

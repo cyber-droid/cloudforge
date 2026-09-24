@@ -3,16 +3,17 @@ Certification Training Service.
 
 Manages training track enrollment, real lesson progress derivation from courses, and training completion verification.
 """
-from datetime import datetime, timezone
-from typing import List, Optional
+
+from typing import Optional
+
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.certification import CertificationTraining, EnrollmentStatus, UserCertificationEnrollment
+from app.models.certification import EnrollmentStatus
 from app.models.progress import LessonProgressStatus
 from app.repositories.certificate_repo import certificate_repo
 from app.repositories.certification_repo import certification_repo
-from app.repositories.course_repo import course_repo, enrollment_repo, lesson_repo, module_repo
+from app.repositories.course_repo import course_repo, enrollment_repo
 from app.repositories.progress_repo import progress_repo
 from app.repositories.user_repo import user_repo
 from app.schemas.certificate import CertificateResponse
@@ -35,7 +36,9 @@ class TrainingService:
         user_id: Optional[str] = None,
     ) -> TrainingDetailResponse:
         """Fetch details of a training track with linked course information."""
-        training = await certification_repo.get_training_by_id_or_slug(db, identifier=identifier)
+        training = await certification_repo.get_training_by_id_or_slug(
+            db, identifier=identifier
+        )
         if not training:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -51,23 +54,38 @@ class TrainingService:
         st = "not_enrolled"
 
         if training.course_id:
-            course = await course_repo.get_by_id_or_slug(db, identifier=training.course_id)
+            course = await course_repo.get_by_id_or_slug(
+                db, identifier=training.course_id
+            )
             if course:
                 pub_modules = [m for m in (course.modules or []) if m.published]
-                pub_lessons = [l for m in pub_modules for l in (m.lessons or []) if l.published]
+                pub_lessons = [
+                    lesson for m in pub_modules for lesson in (m.lessons or []) if lesson.published
+                ]
                 total_lessons = len(pub_lessons)
 
                 if user_id:
-                    enr = await certification_repo.get_user_enrollment(db, user_id=user_id, training_id=training.id)
+                    enr = await certification_repo.get_user_enrollment(
+                        db, user_id=user_id, training_id=training.id
+                    )
                     if enr:
                         st = enr.status
-                    progs = await progress_repo.get_course_lesson_progress(db, user_id=user_id, course_id=training.course_id)
+                    progs = await progress_repo.get_course_lesson_progress(
+                        db, user_id=user_id, course_id=training.course_id
+                    )
                     completed_lesson_ids = {
-                        p.lesson_id for p in progs if (
-                            getattr(p, "completed", False) or getattr(p, "status", None) == "completed" or getattr(p, "status", None) == LessonProgressStatus.COMPLETED.value
+                        p.lesson_id
+                        for p in progs
+                        if (
+                            getattr(p, "completed", False)
+                            or getattr(p, "status", None) == "completed"
+                            or getattr(p, "status", None)
+                            == LessonProgressStatus.COMPLETED.value
                         )
                     }
-                    completed_lessons = len([l for l in pub_lessons if l.id in completed_lesson_ids])
+                    completed_lessons = len(
+                        [lesson for lesson in pub_lessons if lesson.id in completed_lesson_ids]
+                    )
                     if total_lessons > 0:
                         prog = round((completed_lessons / total_lessons) * 100.0, 1)
 
@@ -99,7 +117,9 @@ class TrainingService:
         identifier: str,
     ) -> TrainingSummaryResponse:
         """Enroll user in certification training track and auto-enroll in linked course."""
-        training = await certification_repo.get_training_by_id_or_slug(db, identifier=identifier)
+        training = await certification_repo.get_training_by_id_or_slug(
+            db, identifier=identifier
+        )
         if not training:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -115,11 +135,17 @@ class TrainingService:
 
         # Also enroll in mapped course if present
         if training.course_id:
-            c_enr = await enrollment_repo.get_by_user_and_course(db, user_id=user_id, course_id=training.course_id)
+            c_enr = await enrollment_repo.get_by_user_and_course(
+                db, user_id=user_id, course_id=training.course_id
+            )
             if not c_enr:
-                await enrollment_repo.create(db, user_id=user_id, course_id=training.course_id)
+                await enrollment_repo.create(
+                    db, user_id=user_id, course_id=training.course_id
+                )
 
-        prog_data = await self.get_training_progress(db, user_id=user_id, identifier=training.id)
+        prog_data = await self.get_training_progress(
+            db, user_id=user_id, identifier=training.id
+        )
 
         return TrainingSummaryResponse(
             id=training.id,
@@ -145,14 +171,18 @@ class TrainingService:
         identifier: str,
     ) -> TrainingProgressResponse:
         """Calculate real progress for training from underlying lesson progress."""
-        training = await certification_repo.get_training_by_id_or_slug(db, identifier=identifier)
+        training = await certification_repo.get_training_by_id_or_slug(
+            db, identifier=identifier
+        )
         if not training:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Training track '{identifier}' not found.",
             )
 
-        enrollment = await certification_repo.get_user_enrollment(db, user_id=user_id, training_id=training.id)
+        enrollment = await certification_repo.get_user_enrollment(
+            db, user_id=user_id, training_id=training.id
+        )
         current_status = enrollment.status if enrollment else "not_enrolled"
 
         total_lessons = 0
@@ -162,33 +192,48 @@ class TrainingService:
         prog_pct = 0.0
 
         if training.course_id:
-            course = await course_repo.get_by_id_or_slug(db, identifier=training.course_id)
+            course = await course_repo.get_by_id_or_slug(
+                db, identifier=training.course_id
+            )
             if course:
                 pub_modules = [m for m in (course.modules or []) if m.published]
-                pub_lessons = [l for m in pub_modules for l in (m.lessons or []) if l.published]
+                pub_lessons = [
+                    lesson for m in pub_modules for lesson in (m.lessons or []) if lesson.published
+                ]
                 total_modules = len(pub_modules)
                 total_lessons = len(pub_lessons)
 
-                lesson_progress_records = await progress_repo.get_course_lesson_progress(
-                    db, user_id=user_id, course_id=training.course_id
+                lesson_progress_records = (
+                    await progress_repo.get_course_lesson_progress(
+                        db, user_id=user_id, course_id=training.course_id
+                    )
                 )
                 completed_lesson_ids = {
-                    p.lesson_id for p in lesson_progress_records if (
-                        getattr(p, "completed", False) or getattr(p, "status", None) == "completed" or getattr(p, "status", None) == LessonProgressStatus.COMPLETED.value
+                    p.lesson_id
+                    for p in lesson_progress_records
+                    if (
+                        getattr(p, "completed", False)
+                        or getattr(p, "status", None) == "completed"
+                        or getattr(p, "status", None)
+                        == LessonProgressStatus.COMPLETED.value
                     )
                 }
-                completed_lessons = len([l for l in pub_lessons if l.id in completed_lesson_ids])
+                completed_lessons = len(
+                    [lesson for lesson in pub_lessons if lesson.id in completed_lesson_ids]
+                )
 
                 # Check completed modules
                 for mod in pub_modules:
-                    mod_lessons = [l for l in (mod.lessons or []) if l.published]
-                    if mod_lessons and all(l.id in completed_lesson_ids for l in mod_lessons):
+                    mod_lessons = [lesson for lesson in (mod.lessons or []) if lesson.published]
+                    if mod_lessons and all(
+                        lesson.id in completed_lesson_ids for lesson in mod_lessons
+                    ):
                         completed_modules += 1
 
                 if total_lessons > 0:
                     prog_pct = round((completed_lessons / total_lessons) * 100.0, 1)
 
-        is_eligible = (total_lessons > 0 and completed_lessons >= total_lessons)
+        is_eligible = total_lessons > 0 and completed_lessons >= total_lessons
         existing_cert = await certificate_repo.get_user_certificate_for_training(
             db, user_id=user_id, training_id=training.id
         )
@@ -212,18 +257,22 @@ class TrainingService:
         *,
         user_id: str,
         identifier: str,
-    ) -> TrainingProgressResponse:
+    ) -> CertificateResponse:
         """
         Verify all required content is completed, mark training complete, and issue certificate idempotently.
         """
-        training = await certification_repo.get_training_by_id_or_slug(db, identifier=identifier)
+        training = await certification_repo.get_training_by_id_or_slug(
+            db, identifier=identifier
+        )
         if not training:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Training track '{identifier}' not found.",
             )
 
-        prog_data = await self.get_training_progress(db, user_id=user_id, identifier=training.id)
+        prog_data = await self.get_training_progress(
+            db, user_id=user_id, identifier=training.id
+        )
         if not prog_data.is_eligible_for_certificate:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -233,7 +282,9 @@ class TrainingService:
                 ),
             )
 
-        enrollment = await certification_repo.get_user_enrollment(db, user_id=user_id, training_id=training.id)
+        enrollment = await certification_repo.get_user_enrollment(
+            db, user_id=user_id, training_id=training.id
+        )
         if not enrollment:
             enrollment = await certification_repo.enroll_user_in_training(
                 db,

@@ -1,8 +1,10 @@
 """
 Learning Progress, Activity, and Dashboard Pydantic Schemas.
 """
+
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
+
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.user import UserResponse
@@ -10,20 +12,21 @@ from app.schemas.user import UserResponse
 
 class LessonProgressUpdate(BaseModel):
     """Payload for updating incremental study time on a lesson."""
+
     time_spent_seconds: int = Field(
         default=0,
         ge=0,
         le=86400,
-        description="Elapsed study duration in seconds (must be >= 0 and <= 24 hours per ping)"
+        description="Elapsed study duration in seconds (must be >= 0 and <= 24 hours per ping)",
     )
     status: Optional[str] = Field(
-        default=None,
-        description="Optional status update: 'in_progress' or 'completed'"
+        default=None, description="Optional status update: 'in_progress' or 'completed'"
     )
 
 
 class LessonProgressResponse(BaseModel):
     """Granular lesson completion status and timestamp payload."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -38,6 +41,7 @@ class LessonProgressResponse(BaseModel):
 
 class CourseProgressResponse(BaseModel):
     """Course completion stats derived from real lesson records."""
+
     model_config = ConfigDict(from_attributes=True)
 
     course_id: str
@@ -55,6 +59,7 @@ class CourseProgressResponse(BaseModel):
 
 class LearningActivityResponse(BaseModel):
     """Formatted activity item for recent event feed."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -70,6 +75,7 @@ class LearningActivityResponse(BaseModel):
 
 class DailyActivityItem(BaseModel):
     """Daily aggregated study activity for heatmaps and charts."""
+
     date: str
     count: int = 0
     lessons_completed: int = 0
@@ -78,12 +84,14 @@ class DailyActivityItem(BaseModel):
 
 class WeeklyHoursItem(BaseModel):
     """Day of week hours distribution for weekly chart."""
+
     day: str
     hours: float
 
 
 class OverallProgressResponse(BaseModel):
     """Student aggregate progress metrics."""
+
     overall_progress_percentage: float
     enrolled_courses: int
     completed_courses: int
@@ -97,6 +105,7 @@ class OverallProgressResponse(BaseModel):
 
 class ContinueLearningResponse(BaseModel):
     """Active resume checkpoint for the student dashboard."""
+
     course_id: str
     course_slug: str
     course_title: str
@@ -113,6 +122,7 @@ class ContinueLearningResponse(BaseModel):
 
 class DashboardStatsResponse(BaseModel):
     """Top-level metrics for dashboard cards."""
+
     overall_progress: float
     learning_hours: float
     current_streak: int
@@ -124,6 +134,7 @@ class DashboardStatsResponse(BaseModel):
 
 class DashboardResponse(BaseModel):
     """Unified single-call dashboard payload for high frontend performance."""
+
     user: UserResponse
     stats: DashboardStatsResponse
     continue_learning: Optional[ContinueLearningResponse] = None

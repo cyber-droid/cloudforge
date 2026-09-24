@@ -1,7 +1,9 @@
 """
 Certifications API Endpoints.
 """
+
 from typing import List, Optional
+
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,10 +28,20 @@ router = APIRouter()
     description="Fetch published certifications and exam prep programs with provider/level filtering.",
 )
 async def list_certifications(
-    provider: Optional[str] = Query(default=None, description="Filter by cloud provider (AWS, Microsoft Azure, Kubernetes, DevOps)"),
-    level: Optional[str] = Query(default=None, description="Filter by level (Foundational, Associate, Professional)"),
-    category: Optional[str] = Query(default=None, description="Filter by domain category"),
-    search: Optional[str] = Query(default=None, description="Search term for code, title, or description"),
+    provider: Optional[str] = Query(
+        default=None,
+        description="Filter by cloud provider (AWS, Microsoft Azure, Kubernetes, DevOps)",
+    ),
+    level: Optional[str] = Query(
+        default=None,
+        description="Filter by level (Foundational, Associate, Professional)",
+    ),
+    category: Optional[str] = Query(
+        default=None, description="Filter by domain category"
+    ),
+    search: Optional[str] = Query(
+        default=None, description="Search term for code, title, or description"
+    ),
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=50, ge=1, le=100),
     current_user: Optional[User] = Depends(get_optional_current_user),
@@ -85,12 +97,15 @@ async def get_certification_trainings(
     cert = await certification_repo.get_by_id_or_slug(db, identifier=certification_id)
     if not cert:
         from fastapi import HTTPException
+
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Certification '{certification_id}' not found.",
         )
 
-    trainings = await certification_repo.get_trainings_for_cert(db, certification_id=cert.id)
+    trainings = await certification_repo.get_trainings_for_cert(
+        db, certification_id=cert.id
+    )
     return [
         TrainingSummaryResponse(
             id=t.id,

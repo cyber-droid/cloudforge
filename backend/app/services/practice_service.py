@@ -3,11 +3,13 @@ Practice Exam and Question Service.
 
 Handles timed mock exam simulation, hiding answers before submission, server-side grading, and explanation reviews.
 """
+
 from typing import Dict, List, Optional
+
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.certification import AttemptType, PracticeAttempt, PracticeAttemptAnswer
+from app.models.certification import PracticeAttemptAnswer
 from app.repositories.certification_repo import certification_repo
 from app.repositories.practice_repo import practice_repo
 from app.schemas.certification import (
@@ -35,7 +37,9 @@ class PracticeService:
         """
         Start an exam attempt. Returns questions with choices strictly OMITTING correct answers and explanations.
         """
-        cert = await certification_repo.get_by_id_or_slug(db, identifier=certification_id)
+        cert = await certification_repo.get_by_id_or_slug(
+            db, identifier=certification_id
+        )
         if not cert:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -106,7 +110,9 @@ class PracticeService:
         Submit user answers for server-side evaluation.
         Calculates correctness, persists answers transactionally, and returns full question explanations.
         """
-        attempt = await practice_repo.get_attempt_by_id(db, attempt_id=attempt_id, user_id=user_id)
+        attempt = await practice_repo.get_attempt_by_id(
+            db, attempt_id=attempt_id, user_id=user_id
+        )
         if not attempt:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -127,14 +133,20 @@ class PracticeService:
             for item in data.answers:
                 if isinstance(item, dict):
                     q_id = item.get("question_id") or item.get("id")
-                    opt = item.get("selected_option") if item.get("selected_option") is not None else item.get("selected_answer", -1)
-                    if q_id:
+                    opt = (
+                        item.get("selected_option")
+                        if item.get("selected_option") is not None
+                        else item.get("selected_answer", -1)
+                    )
+                    if q_id and opt is not None:
                         answers_dict[str(q_id)] = int(opt)
                 elif hasattr(item, "question_id") and hasattr(item, "selected_option"):
                     answers_dict[str(item.question_id)] = int(item.selected_option)
 
         question_ids = list(answers_dict.keys())
-        questions_map = await practice_repo.get_questions_by_ids(db, question_ids=question_ids)
+        questions_map = await practice_repo.get_questions_by_ids(
+            db, question_ids=question_ids
+        )
 
         if not questions_map:
             raise HTTPException(
@@ -150,7 +162,7 @@ class PracticeService:
 
         for q_id, q_entity in questions_map.items():
             selected_idx = answers_dict.get(q_id, -1)
-            is_correct = (selected_idx == q_entity.correct_option)
+            is_correct = selected_idx == q_entity.correct_option
             pts = q_entity.points if is_correct else 0
 
             if is_correct:
@@ -228,7 +240,9 @@ class PracticeService:
         attempt_id: str,
     ) -> PracticeAttemptResultResponse:
         """Retrieve results and review explanations for a completed attempt."""
-        attempt = await practice_repo.get_attempt_by_id(db, attempt_id=attempt_id, user_id=user_id)
+        attempt = await practice_repo.get_attempt_by_id(
+            db, attempt_id=attempt_id, user_id=user_id
+        )
         if not attempt:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -242,7 +256,7 @@ class PracticeService:
             )
 
         review_items: List[QuestionReviewResponse] = []
-        for ans in (attempt.answers or []):
+        for ans in attempt.answers or []:
             q = ans.question
             if q:
                 review_items.append(

@@ -1,8 +1,10 @@
 """
 User Pydantic v2 Schemas for request validation and response serialization.
 """
+
 from datetime import datetime
 from typing import Optional
+
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from app.models.user import UserRole
@@ -10,6 +12,7 @@ from app.models.user import UserRole
 
 class UserBase(BaseModel):
     """Base user attributes."""
+
     email: EmailStr
     name: str = Field(..., min_length=2, max_length=100)
     role: UserRole = UserRole.STUDENT
@@ -22,11 +25,13 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     """Schema used internally for user creation with hashed password."""
+
     hashed_password: str
 
 
 class UserUpdate(BaseModel):
     """Schema for updating user profile and terminal/notification preferences."""
+
     name: Optional[str] = Field(default=None, min_length=2, max_length=100)
     avatar_url: Optional[str] = None
     learning_goal: Optional[str] = None
@@ -37,6 +42,7 @@ class UserUpdate(BaseModel):
 
 class UserResponse(BaseModel):
     """Public user response schema. NEVER exposes hashed_password."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str

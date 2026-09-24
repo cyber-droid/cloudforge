@@ -7,26 +7,33 @@ Why this exists:
 3. Immutability & Audit Trail: Snapshots recipient name and training title at the moment of issuance.
 4. Idempotency: Unique constraint on (user_id, training_id) prevents race conditions and duplicates.
 """
+
 import enum
 import secrets
 import uuid
 from datetime import datetime, timezone
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
+
+if TYPE_CHECKING:
+    from app.models.certification import Certification, CertificationTraining
+    from app.models.user import User
+
 from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
     String,
-    Text,
     UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.base import Base, TimestampMixin
+from app.core.database import Base
+from app.models.base import TimestampMixin
 
 
 class CertificateStatus(str, enum.Enum):
     """Lifecycle status of issued credential."""
+
     ISSUED = "issued"
     REVOKED = "revoked"
 
@@ -44,6 +51,7 @@ def generate_certificate_number(prefix: str = "CF") -> str:
 
 class Certificate(Base, TimestampMixin):
     """CloudForge-issued training completion certificate."""
+
     __tablename__ = "certificates"
     __table_args__ = (
         UniqueConstraint("user_id", "training_id", name="uq_user_training_certificate"),
@@ -114,4 +122,6 @@ class Certificate(Base, TimestampMixin):
     # Relationships
     user: Mapped["User"] = relationship("User")
     certification: Mapped[Optional["Certification"]] = relationship("Certification")
-    training: Mapped["CertificationTraining"] = relationship("CertificationTraining", back_populates="certificates")
+    training: Mapped["CertificationTraining"] = relationship(
+        "CertificationTraining", back_populates="certificates"
+    )

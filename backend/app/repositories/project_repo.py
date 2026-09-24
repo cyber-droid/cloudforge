@@ -1,18 +1,17 @@
 """
 Project, Steps, Resources, and Enrollment Repository Layer.
 """
+
 from datetime import datetime, timezone
 from typing import List, Optional, Tuple
+
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.project import (
     Project,
-    ProjectCourse,
     ProjectEnrollmentStatus,
-    ProjectResource,
-    ProjectSkill,
     ProjectStatus,
     ProjectStep,
     ProjectStepProgress,
@@ -110,10 +109,10 @@ class ProjectRepository:
         query = (
             select(UserProjectEnrollment)
             .options(
-                selectinload(UserProjectEnrollment.project)
-                .selectinload(Project.steps),
-                selectinload(UserProjectEnrollment.project)
-                .selectinload(Project.resources),
+                selectinload(UserProjectEnrollment.project).selectinload(Project.steps),
+                selectinload(UserProjectEnrollment.project).selectinload(
+                    Project.resources
+                ),
             )
             .where(
                 UserProjectEnrollment.user_id == user_id,
@@ -133,14 +132,16 @@ class ProjectRepository:
         query = (
             select(UserProjectEnrollment)
             .options(
-                selectinload(UserProjectEnrollment.project)
-                .selectinload(Project.steps),
-                selectinload(UserProjectEnrollment.project)
-                .selectinload(Project.resources),
-                selectinload(UserProjectEnrollment.project)
-                .selectinload(Project.courses),
-                selectinload(UserProjectEnrollment.project)
-                .selectinload(Project.skills),
+                selectinload(UserProjectEnrollment.project).selectinload(Project.steps),
+                selectinload(UserProjectEnrollment.project).selectinload(
+                    Project.resources
+                ),
+                selectinload(UserProjectEnrollment.project).selectinload(
+                    Project.courses
+                ),
+                selectinload(UserProjectEnrollment.project).selectinload(
+                    Project.skills
+                ),
             )
             .where(UserProjectEnrollment.user_id == user_id)
             .order_by(UserProjectEnrollment.last_activity_at.desc())
@@ -234,7 +235,9 @@ class ProjectRepository:
     ) -> ProjectStepProgress:
         """Mark a project step as in_progress."""
         now = datetime.now(timezone.utc)
-        record = await self.get_user_step_progress(db, user_id=user_id, project_step_id=step_id)
+        record = await self.get_user_step_progress(
+            db, user_id=user_id, project_step_id=step_id
+        )
 
         if not record:
             record = ProjectStepProgress(
@@ -263,7 +266,9 @@ class ProjectRepository:
     ) -> Tuple[ProjectStepProgress, bool]:
         """Mark a project step as completed idempotently. Returns (progress, is_newly_completed)."""
         now = datetime.now(timezone.utc)
-        record = await self.get_user_step_progress(db, user_id=user_id, project_step_id=step_id)
+        record = await self.get_user_step_progress(
+            db, user_id=user_id, project_step_id=step_id
+        )
         is_newly_completed = False
 
         if not record:

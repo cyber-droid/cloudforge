@@ -6,28 +6,36 @@ Why these entities exist:
 2. RoadmapStep: Sequential milestones in the career progression referencing courses, skills, or capstone milestones.
 3. UserRoadmapProgress: Tracks student enrollment and active milestones in roadmaps.
 """
+
 import enum
 import uuid
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
+
+if TYPE_CHECKING:
+    from app.models.course import Course
+    from app.models.skill import Skill
+    from app.models.user import User
+
 from sqlalchemy import (
+    JSON,
     Boolean,
     DateTime,
-    Enum as SQLEnum,
     ForeignKey,
     Integer,
-    JSON,
     String,
     Text,
     UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.base import Base, TimestampMixin
+from app.core.database import Base
+from app.models.base import TimestampMixin
 
 
 class RoadmapStepType(str, enum.Enum):
     """Types of steps in a career learning roadmap."""
+
     COURSE = "course"
     SKILL = "skill"
     MILESTONE = "milestone"
@@ -35,6 +43,7 @@ class RoadmapStepType(str, enum.Enum):
 
 class RoadmapStatus(str, enum.Enum):
     """User roadmap progression state."""
+
     NOT_STARTED = "not_started"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
@@ -42,6 +51,7 @@ class RoadmapStatus(str, enum.Enum):
 
 class Roadmap(Base, TimestampMixin):
     """Career Learning Roadmap entity."""
+
     __tablename__ = "roadmaps"
 
     id: Mapped[str] = mapped_column(
@@ -118,6 +128,7 @@ class Roadmap(Base, TimestampMixin):
 
 class RoadmapStep(Base, TimestampMixin):
     """Sequential stage in a career learning roadmap."""
+
     __tablename__ = "roadmap_steps"
 
     id: Mapped[str] = mapped_column(
@@ -189,13 +200,16 @@ class RoadmapStep(Base, TimestampMixin):
     )
 
     # Relationships
-    roadmap: Mapped["Roadmap"] = relationship("Roadmap", back_populates="steps", lazy="selectin")
+    roadmap: Mapped["Roadmap"] = relationship(
+        "Roadmap", back_populates="steps", lazy="selectin"
+    )
     course: Mapped[Optional["Course"]] = relationship("Course", lazy="selectin")
     skill: Mapped[Optional["Skill"]] = relationship("Skill", lazy="selectin")
 
 
 class UserRoadmapProgress(Base, TimestampMixin):
     """User started career roadmap tracking."""
+
     __tablename__ = "user_roadmap_progress"
     __table_args__ = (
         UniqueConstraint("user_id", "roadmap_id", name="uq_user_roadmap"),
@@ -241,4 +255,6 @@ class UserRoadmapProgress(Base, TimestampMixin):
 
     # Relationships
     user: Mapped["User"] = relationship("User", lazy="selectin")
-    roadmap: Mapped["Roadmap"] = relationship("Roadmap", back_populates="user_progresses", lazy="selectin")
+    roadmap: Mapped["Roadmap"] = relationship(
+        "Roadmap", back_populates="user_progresses", lazy="selectin"
+    )

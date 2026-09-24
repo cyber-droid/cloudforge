@@ -8,7 +8,9 @@ Why this exists:
 2. Fails fast at startup if required configuration (database credentials, secrets) is invalid.
 3. Automatically serializes/deserializes complex types such as CORS origin lists.
 """
+
 from typing import List, Union
+
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -18,11 +20,9 @@ class Settings(BaseSettings):
     CloudForge application configuration settings.
     Automatically loaded from .env file or host environment variables.
     """
+
     model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        case_sensitive=True,
-        extra="ignore"
+        env_file=".env", env_file_encoding="utf-8", case_sensitive=True, extra="ignore"
     )
 
     # General Application & Environment
@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "supersecret_cloudforge_dev_jwt_key_change_in_production"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
-    REFRESH_TOKEN_EXPIRE_DAYS: int = 30         # 30 days
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 30  # 30 days
 
     # Database Configuration (PostgreSQL 16)
     POSTGRES_SERVER: str = "localhost"
@@ -44,11 +44,9 @@ class Settings(BaseSettings):
     POSTGRES_USER: str = "cloudforge"
     POSTGRES_PASSWORD: str = "cloudforge_secret_pw"
     POSTGRES_DB: str = "cloudforge_db"
-    
+
     # Asynchronous Database Connection URL for SQLAlchemy 2.0 + asyncpg
-    DATABASE_URL: str = (
-        "postgresql+asyncpg://cloudforge:cloudforge_secret_pw@localhost:5433/cloudforge_db"
-    )
+    DATABASE_URL: str = "postgresql+asyncpg://cloudforge:cloudforge_secret_pw@localhost:5433/cloudforge_db"
 
     # Database Connection Pool Settings
     DB_POOL_SIZE: int = 10
@@ -74,7 +72,10 @@ class Settings(BaseSettings):
             return [i.strip().rstrip("/") for i in v.split(",") if i.strip()]
         elif isinstance(v, list):
             return [str(i).rstrip("/") for i in v]
-        return v
+        elif isinstance(v, str):
+            import json
+            return [str(i).rstrip("/") for i in json.loads(v)]
+        raise ValueError("Invalid CORS origins")
 
 
 settings = Settings()

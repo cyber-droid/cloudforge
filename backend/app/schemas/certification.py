@@ -1,19 +1,23 @@
 """
 Certification, Training, and Practice Exam Pydantic v2 Schemas.
 """
+
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
 class ExamDomainSchema(BaseModel):
     """Domain weighting breakdown for official exam blueprint."""
+
     name: str
     percentage: int
 
 
 class CertificationSummaryResponse(BaseModel):
     """Catalog summary of a certification or prep track."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -44,17 +48,20 @@ class CertificationSummaryResponse(BaseModel):
 
 class CertificationDetailResponse(CertificationSummaryResponse):
     """Detailed certification view including training curriculum tracks."""
+
     trainings: List["TrainingSummaryResponse"] = Field(default_factory=list)
 
 
 class CertificationListResponse(BaseModel):
     """Paginated or filtered certification catalog response."""
+
     items: List[CertificationSummaryResponse]
     total: int
 
 
 class TrainingSummaryResponse(BaseModel):
     """Summary of a structured certification training track."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -68,12 +75,15 @@ class TrainingSummaryResponse(BaseModel):
     modules: List[str] = Field(default_factory=list)
     is_published: bool
     progress_percentage: float = 0.0
-    status: str = "not_enrolled"  # 'not_enrolled', 'enrolled', 'in_progress', 'completed'
+    status: str = (
+        "not_enrolled"  # 'not_enrolled', 'enrolled', 'in_progress', 'completed'
+    )
     created_at: Optional[datetime] = None
 
 
 class TrainingDetailResponse(TrainingSummaryResponse):
     """Full detail view of training program with linked course preview."""
+
     course_title: Optional[str] = None
     course_slug: Optional[str] = None
     total_lessons: int = 0
@@ -82,6 +92,7 @@ class TrainingDetailResponse(TrainingSummaryResponse):
 
 class TrainingProgressResponse(BaseModel):
     """Live progress breakdown for a certification training program."""
+
     training_id: str
     certification_id: str
     status: str
@@ -96,6 +107,7 @@ class TrainingProgressResponse(BaseModel):
 
 class PracticeQuestionPublicResponse(BaseModel):
     """Practice question sent during an exam (OMITS correct option and explanation)."""
+
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
     id: str
@@ -110,6 +122,7 @@ class PracticeQuestionPublicResponse(BaseModel):
 
 class PracticeAttemptStartRequest(BaseModel):
     """Request to initiate a new practice quiz or mock exam."""
+
     attempt_type: str = "practice_quiz"  # 'practice_quiz', 'practice_exam'
     limit: int = 10
     question_count: Optional[int] = None
@@ -118,18 +131,23 @@ class PracticeAttemptStartRequest(BaseModel):
 
 class QuestionAnswerItem(BaseModel):
     """Answer submission for a specific question."""
+
     question_id: str
     selected_option: int
 
 
 class PracticeAttemptSubmitRequest(BaseModel):
     """User submission for evaluation by backend."""
-    answers: Optional[Any] = None  # Supports either Dict[str, int] or List[QuestionAnswerItem]
+
+    answers: Optional[Any] = (
+        None  # Supports either Dict[str, int] or List[QuestionAnswerItem]
+    )
     time_spent_seconds: int = 0
 
 
 class QuestionReviewResponse(BaseModel):
     """Question review item returned AFTER exam submission."""
+
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
     id: Optional[str] = None
@@ -150,6 +168,7 @@ class QuestionReviewResponse(BaseModel):
 
 class PracticeAttemptDetailResponse(BaseModel):
     """Practice attempt session with questions (omits correct answers/explanations)."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -169,6 +188,7 @@ class PracticeAttemptDetailResponse(BaseModel):
 
 class PracticeAttemptResultResponse(BaseModel):
     """Evaluated score and feedback for a completed practice attempt."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -189,6 +209,7 @@ class PracticeAttemptResultResponse(BaseModel):
 
 class PracticeAttemptSummaryResponse(BaseModel):
     """Brief history summary item for previous exam attempts."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -204,4 +225,3 @@ class PracticeAttemptSummaryResponse(BaseModel):
     time_spent_seconds: int
     started_at: datetime
     submitted_at: Optional[datetime] = None
-

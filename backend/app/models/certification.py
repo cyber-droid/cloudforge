@@ -8,28 +8,37 @@ Why these entities exist:
 4. PracticeQuestion: Domain-weighted question bank for quizzes and full timed mock exams. Correct options and explanations remain server-side.
 5. PracticeAttempt & PracticeAttemptAnswer: Complete immutable attempt history with server-evaluated scores and review metadata.
 """
+
 import enum
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
+
+if TYPE_CHECKING:
+    from app.models.certificate import Certificate
+    from app.models.course import Course
+    from app.models.user import User
+
 from sqlalchemy import (
+    JSON,
     Boolean,
     DateTime,
     Float,
     ForeignKey,
     Integer,
-    JSON,
     String,
     Text,
     UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.base import Base, TimestampMixin
+from app.core.database import Base
+from app.models.base import TimestampMixin
 
 
 class CertificationLevel(str, enum.Enum):
     """Certification complexity level."""
+
     FOUNDATIONAL = "Foundational"
     ASSOCIATE = "Associate"
     PROFESSIONAL = "Professional"
@@ -38,6 +47,7 @@ class CertificationLevel(str, enum.Enum):
 
 class EnrollmentStatus(str, enum.Enum):
     """Certification training enrollment lifecycle status."""
+
     ENROLLED = "enrolled"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
@@ -45,12 +55,14 @@ class EnrollmentStatus(str, enum.Enum):
 
 class AttemptType(str, enum.Enum):
     """Type of practice assessment."""
+
     PRACTICE_QUIZ = "practice_quiz"
     PRACTICE_EXAM = "practice_exam"
 
 
 class Certification(Base, TimestampMixin):
     """Certification and exam preparation program."""
+
     __tablename__ = "certifications"
 
     id: Mapped[str] = mapped_column(
@@ -202,7 +214,9 @@ class Certification(Base, TimestampMixin):
             kwargs["training_title"] = f"{name_val} Training Program"
         if "training_certificate_name" not in kwargs:
             name_val = kwargs.get("name") or kwargs.get("title", "Training")
-            kwargs["training_certificate_name"] = f"Certificate of Completion - {name_val}"
+            kwargs["training_certificate_name"] = (
+                f"Certificate of Completion - {name_val}"
+            )
         super().__init__(**kwargs)
 
     # Relationships
@@ -232,6 +246,7 @@ class Certification(Base, TimestampMixin):
 
 class CertificationTraining(Base, TimestampMixin):
     """Structured training track mapped to curriculum courses."""
+
     __tablename__ = "certification_trainings"
 
     id: Mapped[str] = mapped_column(
@@ -318,6 +333,7 @@ class CertificationTraining(Base, TimestampMixin):
 
 class UserCertificationEnrollment(Base, TimestampMixin):
     """Tracks a student's enrollment and progress in certification training."""
+
     __tablename__ = "user_certification_enrollments"
     __table_args__ = (
         UniqueConstraint("user_id", "training_id", name="uq_user_training_enrollment"),
@@ -369,12 +385,17 @@ class UserCertificationEnrollment(Base, TimestampMixin):
 
     # Relationships
     user: Mapped["User"] = relationship("User")
-    certification: Mapped["Certification"] = relationship("Certification", back_populates="enrollments")
-    training: Mapped["CertificationTraining"] = relationship("CertificationTraining", back_populates="enrollments")
+    certification: Mapped["Certification"] = relationship(
+        "Certification", back_populates="enrollments"
+    )
+    training: Mapped["CertificationTraining"] = relationship(
+        "CertificationTraining", back_populates="enrollments"
+    )
 
 
 class PracticeQuestion(Base, TimestampMixin):
     """Domain-weighted question bank entry for exam simulation."""
+
     __tablename__ = "practice_questions"
 
     id: Mapped[str] = mapped_column(
@@ -453,7 +474,9 @@ class PracticeQuestion(Base, TimestampMixin):
         super().__init__(**kwargs)
 
     # Relationships
-    certification: Mapped["Certification"] = relationship("Certification", back_populates="questions")
+    certification: Mapped["Certification"] = relationship(
+        "Certification", back_populates="questions"
+    )
     answers: Mapped[List["PracticeAttemptAnswer"]] = relationship(
         "PracticeAttemptAnswer",
         back_populates="question",
@@ -463,6 +486,7 @@ class PracticeQuestion(Base, TimestampMixin):
 
 class PracticeAttempt(Base, TimestampMixin):
     """Practice quiz or timed mock exam attempt instance."""
+
     __tablename__ = "practice_attempts"
 
     id: Mapped[str] = mapped_column(
@@ -543,7 +567,9 @@ class PracticeAttempt(Base, TimestampMixin):
 
     # Relationships
     user: Mapped["User"] = relationship("User")
-    certification: Mapped["Certification"] = relationship("Certification", back_populates="practice_attempts")
+    certification: Mapped["Certification"] = relationship(
+        "Certification", back_populates="practice_attempts"
+    )
     answers: Mapped[List["PracticeAttemptAnswer"]] = relationship(
         "PracticeAttemptAnswer",
         back_populates="attempt",
@@ -554,9 +580,12 @@ class PracticeAttempt(Base, TimestampMixin):
 
 class PracticeAttemptAnswer(Base, TimestampMixin):
     """User response to a single practice question during an attempt."""
+
     __tablename__ = "practice_attempt_answers"
     __table_args__ = (
-        UniqueConstraint("attempt_id", "question_id", name="uq_attempt_question_answer"),
+        UniqueConstraint(
+            "attempt_id", "question_id", name="uq_attempt_question_answer"
+        ),
     )
 
     id: Mapped[str] = mapped_column(
@@ -592,5 +621,9 @@ class PracticeAttemptAnswer(Base, TimestampMixin):
     )
 
     # Relationships
-    attempt: Mapped["PracticeAttempt"] = relationship("PracticeAttempt", back_populates="answers")
-    question: Mapped["PracticeQuestion"] = relationship("PracticeQuestion", back_populates="answers", lazy="joined")
+    attempt: Mapped["PracticeAttempt"] = relationship(
+        "PracticeAttempt", back_populates="answers"
+    )
+    question: Mapped["PracticeQuestion"] = relationship(
+        "PracticeQuestion", back_populates="answers", lazy="joined"
+    )

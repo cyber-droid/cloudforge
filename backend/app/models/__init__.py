@@ -3,7 +3,9 @@ SQLAlchemy ORM Models Package.
 
 Re-exports all database models to ensure Alembic and SQLAlchemy registry capture them.
 """
-from app.models.base import Base, TimestampMixin
+
+from app.core.database import Base
+from app.models.base import TimestampMixin
 from app.models.certificate import (
     Certificate,
     CertificateStatus,
@@ -36,23 +38,6 @@ from app.models.progress import (
     LessonProgress,
     LessonProgressStatus,
 )
-from app.models.roadmap import (
-    Roadmap,
-    RoadmapStatus,
-    RoadmapStep,
-    RoadmapStepType,
-    UserRoadmapProgress,
-)
-from app.models.skill import (
-    CourseSkill,
-    LEVEL_NAMES,
-    Skill,
-    SkillCategory,
-    SkillEvidence,
-    SkillLevel,
-    UserSkill,
-    get_level_from_percentage,
-)
 from app.models.project import (
     Project,
     ProjectCourse,
@@ -67,6 +52,23 @@ from app.models.project import (
     StepProgressStatus,
     StepType,
     UserProjectEnrollment,
+)
+from app.models.roadmap import (
+    Roadmap,
+    RoadmapStatus,
+    RoadmapStep,
+    RoadmapStepType,
+    UserRoadmapProgress,
+)
+from app.models.skill import (
+    LEVEL_NAMES,
+    CourseSkill,
+    Skill,
+    SkillCategory,
+    SkillEvidence,
+    SkillLevel,
+    UserSkill,
+    get_level_from_percentage,
 )
 from app.models.user import RefreshToken, User, UserRole
 

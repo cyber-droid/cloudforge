@@ -16,9 +16,10 @@ Why this architecture exists:
    Seamlessly integrates with the existing LearningActivity audit trail for project milestones
    (PROJECT_STARTED, PROJECT_STEP_COMPLETED, PROJECT_COMPLETED).
 """
+
 from datetime import datetime, timezone
-from math import ceil
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
+
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,14 +27,11 @@ from app.core.logging import logger
 from app.models.progress import ActivityType
 from app.models.project import (
     Project,
-    ProjectCourse,
     ProjectEnrollmentStatus,
-    ProjectSkill,
     ProjectStatus,
     ProjectStep,
     ProjectStepProgress,
     StepProgressStatus,
-    UserProjectEnrollment,
 )
 from app.models.user import User
 from app.repositories.progress_repo import activity_repo
@@ -46,7 +44,6 @@ from app.schemas.project import (
     ProjectProgressResponse,
     ProjectResourceResponse,
     ProjectSkillReference,
-    ProjectStepProgressResponse,
     ProjectStepResponse,
     ProjectSummaryResponse,
 )
@@ -65,7 +62,9 @@ class ProjectService:
         responses = []
         for step in sorted_steps:
             prog = progress_map.get(step.id)
-            is_completed = prog is not None and prog.status == StepProgressStatus.COMPLETED.value
+            is_completed = (
+                prog is not None and prog.status == StepProgressStatus.COMPLETED.value
+            )
             step_status = prog.status if prog else StepProgressStatus.NOT_STARTED.value
 
             responses.append(
@@ -95,7 +94,6 @@ class ProjectService:
             for s in project.skills:
                 skills.append(s.name)
         return skills
-
 
     async def list_projects(
         self,
@@ -139,11 +137,15 @@ class ProjectService:
                 )
                 if enrollment:
                     user_status = enrollment.status
-                    user_progs = await project_repo.get_user_step_progress_list_for_project(
-                        db, user_id=current_user.id, project_id=p.id
+                    user_progs = (
+                        await project_repo.get_user_step_progress_list_for_project(
+                            db, user_id=current_user.id, project_id=p.id
+                        )
                     )
                     completed_steps = sum(
-                        1 for prog in user_progs if prog.status == StepProgressStatus.COMPLETED.value
+                        1
+                        for prog in user_progs
+                        if prog.status == StepProgressStatus.COMPLETED.value
                     )
                     if total_steps > 0:
                         progress_pct = round((completed_steps / total_steps) * 100.0, 1)
@@ -306,7 +308,9 @@ class ProjectService:
         project_identifier: str,
     ) -> ProjectEnrollmentResponse:
         """Enroll user in a project and log learning activity."""
-        project = await project_repo.get_by_id_or_slug(db, identifier=project_identifier)
+        project = await project_repo.get_by_id_or_slug(
+            db, identifier=project_identifier
+        )
         if not project:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -328,17 +332,26 @@ class ProjectService:
                     "project_slug": project.slug,
                 },
             )
-            logger.info("User %s enrolled in project %s (%s)", user_id, project.title, project.id)
+            logger.info(
+                "User %s enrolled in project %s (%s)",
+                user_id,
+                project.title,
+                project.id,
+            )
 
         user_progs = await project_repo.get_user_step_progress_list_for_project(
             db, user_id=user_id, project_id=project.id
         )
         completed_steps = sum(
-            1 for prog in user_progs if prog.status == StepProgressStatus.COMPLETED.value
+            1
+            for prog in user_progs
+            if prog.status == StepProgressStatus.COMPLETED.value
         )
         total_steps = len(project.steps) if project.steps else 0
         progress_pct = (
-            round((completed_steps / total_steps) * 100.0, 1) if total_steps > 0 else 0.0
+            round((completed_steps / total_steps) * 100.0, 1)
+            if total_steps > 0
+            else 0.0
         )
 
         return ProjectEnrollmentResponse(
@@ -372,11 +385,15 @@ class ProjectService:
                 db, user_id=user_id, project_id=e.project_id
             )
             completed_steps = sum(
-                1 for prog in user_progs if prog.status == StepProgressStatus.COMPLETED.value
+                1
+                for prog in user_progs
+                if prog.status == StepProgressStatus.COMPLETED.value
             )
             total_steps = len(e.project.steps) if e.project.steps else 0
             progress_pct = (
-                round((completed_steps / total_steps) * 100.0, 1) if total_steps > 0 else 0.0
+                round((completed_steps / total_steps) * 100.0, 1)
+                if total_steps > 0
+                else 0.0
             )
 
             skills_list = self._extract_skill_names(e.project)
@@ -430,7 +447,9 @@ class ProjectService:
         project_identifier: str,
     ) -> ProjectProgressResponse:
         """Fetch granular step breakdown and calculated progress for a project."""
-        project = await project_repo.get_by_id_or_slug(db, identifier=project_identifier)
+        project = await project_repo.get_by_id_or_slug(
+            db, identifier=project_identifier
+        )
         if not project:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -447,11 +466,15 @@ class ProjectService:
         progress_map = {p.project_step_id: p for p in user_progs}
 
         completed_steps = sum(
-            1 for prog in user_progs if prog.status == StepProgressStatus.COMPLETED.value
+            1
+            for prog in user_progs
+            if prog.status == StepProgressStatus.COMPLETED.value
         )
         total_steps = len(project.steps) if project.steps else 0
         progress_pct = (
-            round((completed_steps / total_steps) * 100.0, 1) if total_steps > 0 else 0.0
+            round((completed_steps / total_steps) * 100.0, 1)
+            if total_steps > 0
+            else 0.0
         )
         is_completed = (
             enrollment is not None
@@ -483,14 +506,18 @@ class ProjectService:
         step_id: str,
     ) -> ProjectStepResponse:
         """Start working on a specific project engineering step."""
-        project = await project_repo.get_by_id_or_slug(db, identifier=project_identifier)
+        project = await project_repo.get_by_id_or_slug(
+            db, identifier=project_identifier
+        )
         if not project:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Project '{project_identifier}' not found.",
             )
 
-        step = await project_repo.get_step_by_id(db, step_id=step_id, project_id=project.id)
+        step = await project_repo.get_step_by_id(
+            db, step_id=step_id, project_id=project.id
+        )
         if not step:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -498,7 +525,9 @@ class ProjectService:
             )
 
         # Ensure enrollment exists
-        enrollment, _ = await project_repo.enroll_user(db, user_id=user_id, project_id=project.id)
+        enrollment, _ = await project_repo.enroll_user(
+            db, user_id=user_id, project_id=project.id
+        )
 
         prog = await project_repo.start_step(db, user_id=user_id, step_id=step.id)
 
@@ -536,14 +565,18 @@ class ProjectService:
         Complete a project step idempotently, recalculate completion percentage,
         and update project completion status if all required steps are completed.
         """
-        project = await project_repo.get_by_id_or_slug(db, identifier=project_identifier)
+        project = await project_repo.get_by_id_or_slug(
+            db, identifier=project_identifier
+        )
         if not project:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Project '{project_identifier}' not found.",
             )
 
-        step = await project_repo.get_step_by_id(db, step_id=step_id, project_id=project.id)
+        step = await project_repo.get_step_by_id(
+            db, step_id=step_id, project_id=project.id
+        )
         if not step:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -551,7 +584,9 @@ class ProjectService:
             )
 
         # Ensure user is enrolled
-        enrollment, _ = await project_repo.enroll_user(db, user_id=user_id, project_id=project.id)
+        enrollment, _ = await project_repo.enroll_user(
+            db, user_id=user_id, project_id=project.id
+        )
 
         # Mark step complete idempotently
         prog, is_newly_completed = await project_repo.complete_step(
@@ -603,13 +638,20 @@ class ProjectService:
         )
 
         progress_pct = (
-            round((completed_count / total_steps) * 100.0, 1) if total_steps > 0 else 0.0
+            round((completed_count / total_steps) * 100.0, 1)
+            if total_steps > 0
+            else 0.0
         )
 
         # Check project completion condition
-        all_required_done = total_required > 0 and completed_required_count >= total_required
+        all_required_done = (
+            total_required > 0 and completed_required_count >= total_required
+        )
 
-        if all_required_done and enrollment.status != ProjectEnrollmentStatus.COMPLETED.value:
+        if (
+            all_required_done
+            and enrollment.status != ProjectEnrollmentStatus.COMPLETED.value
+        ):
             # Mark enrollment as completed
             await project_repo.update_enrollment(
                 db,
@@ -631,7 +673,9 @@ class ProjectService:
                     "total_steps": total_steps,
                 },
             )
-            logger.info("User %s completed project %s (%s)", user_id, project.title, project.id)
+            logger.info(
+                "User %s completed project %s (%s)", user_id, project.title, project.id
+            )
         else:
             await project_repo.update_enrollment(
                 db,

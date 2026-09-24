@@ -1,7 +1,9 @@
 """
 Practice Exam and Quiz Endpoints.
 """
+
 from typing import List, Optional
+
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 

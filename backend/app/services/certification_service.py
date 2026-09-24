@@ -3,7 +3,9 @@ Certification Service.
 
 Coordinates certification catalog browsing, exam domain structures, and authentic readiness calculation.
 """
+
 from typing import List, Optional
+
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,6 +19,7 @@ from app.schemas.certification import (
     CertificationSummaryResponse,
     TrainingSummaryResponse,
 )
+from app.services.progress_service import progress_service
 
 
 class CertificationService:
@@ -49,7 +52,9 @@ class CertificationService:
         for cert in items:
             readiness = 0.0
             if user_id:
-                readiness = await self.calculate_readiness(db, user_id=user_id, certification=cert)
+                readiness = await self.calculate_readiness(
+                    db, user_id=user_id, certification=cert
+                )
 
             summaries.append(
                 CertificationSummaryResponse(
@@ -99,21 +104,33 @@ class CertificationService:
 
         readiness = 0.0
         if user_id:
-            readiness = await self.calculate_readiness(db, user_id=user_id, certification=cert)
+            readiness = await self.calculate_readiness(
+                db, user_id=user_id, certification=cert
+            )
 
         # Build training responses with user status if available
         trainings_summary: List[TrainingSummaryResponse] = []
-        for tr in (cert.trainings or []):
+        for tr in cert.trainings or []:
             prog = 0.0
             st = "not_enrolled"
             if user_id:
-                enr = await certification_repo.get_user_enrollment(db, user_id=user_id, training_id=tr.id)
+                enr = await certification_repo.get_user_enrollment(
+                    db, user_id=user_id, training_id=tr.id
+                )
                 if enr:
                     st = enr.status
                     if tr.course_id:
-                        c_enr = await enrollment_repo.get_by_user_and_course(db, user_id=user_id, course_id=tr.course_id)
+                        c_enr = await enrollment_repo.get_by_user_and_course(
+                            db, user_id=user_id, course_id=tr.course_id
+                        )
                         if c_enr:
-                            prog = c_enr.progress_percentage
+                            try:
+                                prog_data = await progress_service.get_course_progress(
+                                    db, user_id=user_id, course_identifier=tr.course_id
+                                )
+                                prog = prog_data.progress_percentage
+                            except HTTPException:
+                                pass
 
             trainings_summary.append(
                 TrainingSummaryResponse(
@@ -181,9 +198,17 @@ class CertificationService:
             counted_trainings = 0
             for tr in trainings:
                 if tr.course_id:
-                    c_enr = await enrollment_repo.get_by_user_and_course(db, user_id=user_id, course_id=tr.course_id)
+                    c_enr = await enrollment_repo.get_by_user_and_course(
+                        db, user_id=user_id, course_id=tr.course_id
+                    )
                     if c_enr:
-                        total_course_prog += c_enr.progress_percentage
+                        try:
+                            prog_data = await progress_service.get_course_progress(
+                                db, user_id=user_id, course_identifier=tr.course_id
+                            )
+                            total_course_prog += prog_data.progress_percentage
+                        except HTTPException:
+                            pass
                     counted_trainings += 1
             if counted_trainings > 0:
                 course_component = (total_course_prog / counted_trainings) * 0.60

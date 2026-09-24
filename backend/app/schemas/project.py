@@ -1,13 +1,16 @@
 """
 Pydantic v2 Schemas for Projects, Project Steps, Resources, Enrollments, and Progress.
 """
+
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
 class ProjectCourseReference(BaseModel):
     """Curriculum course linked to a project."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -19,6 +22,7 @@ class ProjectCourseReference(BaseModel):
 
 class ProjectSkillReference(BaseModel):
     """Competency skill linked to a project."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -30,6 +34,7 @@ class ProjectSkillReference(BaseModel):
 
 class ProjectStepResponse(BaseModel):
     """Individual engineering milestone inside a project."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -50,6 +55,7 @@ class ProjectStepResponse(BaseModel):
 
 class ProjectResourceResponse(BaseModel):
     """Supplementary asset, architecture diagram, or repository."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -63,6 +69,7 @@ class ProjectResourceResponse(BaseModel):
 
 class ProjectStepProgressResponse(BaseModel):
     """Granular user progress record for a single project step."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -76,11 +83,13 @@ class ProjectStepProgressResponse(BaseModel):
 
 class ProjectStepCompleteRequest(BaseModel):
     """Optional payload when completing a project step."""
+
     notes: Optional[str] = None
 
 
 class ProjectSummaryResponse(BaseModel):
     """Catalog summary of a DevOps engineering project."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -107,6 +116,7 @@ class ProjectSummaryResponse(BaseModel):
 
 class ProjectDetailResponse(ProjectSummaryResponse):
     """Full detailed view of an engineering project including syllabus and resources."""
+
     architecture_overview: Optional[str] = None
     prerequisites: List[str] = Field(default_factory=list)
     learning_objectives: List[str] = Field(default_factory=list)
@@ -118,6 +128,7 @@ class ProjectDetailResponse(ProjectSummaryResponse):
 
 class ProjectListResponse(BaseModel):
     """Paginated project listing response."""
+
     items: List[ProjectSummaryResponse]
     total: int
     page: int
@@ -126,6 +137,7 @@ class ProjectListResponse(BaseModel):
 
 class ProjectEnrollmentResponse(BaseModel):
     """User project enrollment state."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -143,6 +155,7 @@ class ProjectEnrollmentResponse(BaseModel):
 
 class ProjectProgressResponse(BaseModel):
     """Live calculated progress breakdown for a project."""
+
     project_id: str
     user_id: str
     status: str
@@ -158,6 +171,7 @@ class ProjectProgressResponse(BaseModel):
 
 class ProjectCreate(BaseModel):
     """Payload for creating a new project (Admin/Instructor)."""
+
     title: str
     slug: str
     short_description: Optional[str] = None
@@ -179,6 +193,7 @@ class ProjectCreate(BaseModel):
 
 class ProjectUpdate(BaseModel):
     """Payload for updating project metadata."""
+
     title: Optional[str] = None
     slug: Optional[str] = None
     short_description: Optional[str] = None

@@ -11,26 +11,32 @@ Why these entities exist:
    course_enrolled, course_completed). Authoritative ledger used for calculating authentic
    learning streaks, daily activity heatmaps, and weekly study hours.
 """
+
 import enum
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional
+
+if TYPE_CHECKING:
+    from app.models.course import Course, Lesson
+
 from sqlalchemy import (
+    JSON,
     DateTime,
-    Enum as SQLEnum,
     ForeignKey,
     Integer,
-    JSON,
     String,
     UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.base import Base, TimestampMixin
+from app.core.database import Base
+from app.models.base import TimestampMixin
 
 
 class LessonProgressStatus(str, enum.Enum):
     """Status of a lesson for a specific user."""
+
     NOT_STARTED = "not_started"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
@@ -38,6 +44,7 @@ class LessonProgressStatus(str, enum.Enum):
 
 class ActivityType(str, enum.Enum):
     """Learning activity events."""
+
     LESSON_STARTED = "lesson_started"
     LESSON_COMPLETED = "lesson_completed"
     COURSE_ENROLLED = "course_enrolled"
@@ -50,6 +57,7 @@ class ActivityType(str, enum.Enum):
 
 class LessonProgress(Base, TimestampMixin):
     """User progress through a single lesson."""
+
     __tablename__ = "lesson_progress"
     __table_args__ = (
         UniqueConstraint("user_id", "lesson_id", name="uq_user_lesson_progress"),
@@ -109,6 +117,7 @@ class LessonProgress(Base, TimestampMixin):
 
 class LearningActivity(Base, TimestampMixin):
     """Append-only learning event stream for streak, hours, and heatmap calculations."""
+
     __tablename__ = "learning_activities"
 
     id: Mapped[str] = mapped_column(

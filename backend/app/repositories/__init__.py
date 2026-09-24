@@ -1,7 +1,16 @@
 """
 Repositories Package - Encapsulates Database Query and Mutation Operations.
 """
+
 from app.repositories.base import BaseRepository
+from app.repositories.certificate_repo import (
+    CertificateRepository,
+    certificate_repo,
+)
+from app.repositories.certification_repo import (
+    CertificationRepository,
+    certification_repo,
+)
 from app.repositories.course_repo import (
     CourseRepository,
     EnrollmentRepository,
@@ -12,23 +21,15 @@ from app.repositories.course_repo import (
     lesson_repo,
     module_repo,
 )
+from app.repositories.practice_repo import (
+    PracticeRepository,
+    practice_repo,
+)
 from app.repositories.progress_repo import (
     ActivityRepository,
     ProgressRepository,
     activity_repo,
     progress_repo,
-)
-from app.repositories.certificate_repo import (
-    CertificateRepository,
-    certificate_repo,
-)
-from app.repositories.certification_repo import (
-    CertificationRepository,
-    certification_repo,
-)
-from app.repositories.practice_repo import (
-    PracticeRepository,
-    practice_repo,
 )
 from app.repositories.project_repo import (
     ProjectRepository,
@@ -80,4 +81,3 @@ __all__ = [
     "CertificateRepository",
     "certificate_repo",
 ]
-

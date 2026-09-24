@@ -9,29 +9,34 @@ Why these entities exist:
    derived deterministically from lesson and course completions.
 4. SkillEvidence: Audit log capturing learning evidence points contributing to skill progression.
 """
+
 import enum
 import uuid
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
+
+if TYPE_CHECKING:
+    from app.models.course import Course
+    from app.models.user import User
+
 from sqlalchemy import (
     DateTime,
-    Enum as SQLEnum,
     Float,
     ForeignKey,
     Integer,
-    JSON,
     String,
-    Table,
     Text,
     UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.base import Base, TimestampMixin
+from app.core.database import Base
+from app.models.base import TimestampMixin
 
 
 class SkillCategory(str, enum.Enum):
     """Supported technical skill domain classifications."""
+
     CLOUD = "Cloud"
     DEVOPS = "DevOps"
     DEVSECOPS = "DevSecOps"
@@ -45,11 +50,12 @@ class SkillCategory(str, enum.Enum):
 
 class SkillLevel(int, enum.Enum):
     """Standardized CloudForge learning indicator levels."""
-    BEGINNER = 1      # 0 - 20%
+
+    BEGINNER = 1  # 0 - 20%
     FOUNDATIONAL = 2  # 21 - 40%
     INTERMEDIATE = 3  # 41 - 70%
-    ADVANCED = 4      # 71 - 90%
-    EXPERT = 5        # 91 - 100%
+    ADVANCED = 4  # 71 - 90%
+    EXPERT = 5  # 91 - 100%
 
 
 LEVEL_NAMES = {
@@ -77,6 +83,7 @@ def get_level_from_percentage(percentage: float) -> int:
 
 class CourseSkill(Base):
     """Many-to-Many association between Courses and Skills."""
+
     __tablename__ = "course_skills"
 
     course_id: Mapped[str] = mapped_column(
@@ -94,6 +101,7 @@ class CourseSkill(Base):
 
 class Skill(Base, TimestampMixin):
     """Core Engineering Skill entity."""
+
     __tablename__ = "skills"
 
     id: Mapped[str] = mapped_column(
@@ -151,10 +159,9 @@ class Skill(Base, TimestampMixin):
 
 class UserSkill(Base, TimestampMixin):
     """Computed student skill proficiency record."""
+
     __tablename__ = "user_skills"
-    __table_args__ = (
-        UniqueConstraint("user_id", "skill_id", name="uq_user_skill"),
-    )
+    __table_args__ = (UniqueConstraint("user_id", "skill_id", name="uq_user_skill"),)
 
     id: Mapped[str] = mapped_column(
         String(36),
@@ -197,11 +204,14 @@ class UserSkill(Base, TimestampMixin):
 
     # Relationships
     user: Mapped["User"] = relationship("User", lazy="selectin")
-    skill: Mapped["Skill"] = relationship("Skill", back_populates="user_skills", lazy="selectin")
+    skill: Mapped["Skill"] = relationship(
+        "Skill", back_populates="user_skills", lazy="selectin"
+    )
 
 
 class SkillEvidence(Base):
     """Audit log of individual learning events contributing to skill score."""
+
     __tablename__ = "skill_evidence"
 
     id: Mapped[str] = mapped_column(

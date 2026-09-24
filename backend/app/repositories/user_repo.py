@@ -3,8 +3,10 @@ User and Refresh Token Repository Layer.
 
 Encapsulates database queries for User accounts and JWT Refresh Token session management.
 """
+
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Any, Optional
+
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,22 +17,19 @@ from app.schemas.user import UserCreate, UserUpdate
 
 class UserRepository(BaseRepository[User, UserCreate, UserUpdate]):
     """Data access methods for User entities."""
+
     def __init__(self):
         super().__init__(User)
 
     async def get_by_email(self, db: AsyncSession, *, email: str) -> Optional[User]:
         """Fetch a single user by case-insensitive email address."""
         normalized_email = email.lower().strip()
-        result = await db.execute(
-            select(User).where(User.email == normalized_email)
-        )
+        result = await db.execute(select(User).where(User.email == normalized_email))
         return result.scalars().first()
 
-    async def get_by_id(self, db: AsyncSession, *, id: str) -> Optional[User]:
+    async def get_by_id(self, db: AsyncSession, id: Any) -> Optional[User]:
         """Fetch a single user by primary key ID."""
-        result = await db.execute(
-            select(User).where(User.id == id)
-        )
+        result = await db.execute(select(User).where(User.id == id))
         return result.scalars().first()
 
     async def create_user(self, db: AsyncSession, *, obj_in: UserCreate) -> User:
@@ -48,12 +47,7 @@ class RefreshTokenRepository:
     """Data access methods for JWT Refresh Tokens."""
 
     async def create(
-        self,
-        db: AsyncSession,
-        *,
-        user_id: str,
-        token_hash: str,
-        expires_at: datetime
+        self, db: AsyncSession, *, user_id: str, token_hash: str, expires_at: datetime
     ) -> RefreshToken:
         """Create and persist a new refresh token record."""
         db_token = RefreshToken(
@@ -68,10 +62,7 @@ class RefreshTokenRepository:
         return db_token
 
     async def get_active_by_hash(
-        self,
-        db: AsyncSession,
-        *,
-        token_hash: str
+        self, db: AsyncSession, *, token_hash: str
     ) -> Optional[RefreshToken]:
         """Fetch an active, non-revoked refresh token matching the hash."""
         now = datetime.now(timezone.utc)
@@ -92,7 +83,7 @@ class RefreshTokenRepository:
             .values(revoked=True)
         )
         await db.commit()
-        return result.rowcount > 0
+        return getattr(result, "rowcount", 0) > 0
 
     async def revoke_all_user_tokens(self, db: AsyncSession, *, user_id: str) -> int:
         """Revoke all refresh tokens for a given user (force signout all devices)."""
@@ -102,7 +93,7 @@ class RefreshTokenRepository:
             .values(revoked=True)
         )
         await db.commit()
-        return result.rowcount
+        return getattr(result, "rowcount", 0)
 
 
 user_repo = UserRepository()

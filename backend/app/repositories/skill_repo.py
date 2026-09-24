@@ -1,15 +1,19 @@
 """
 Skill and Competency Repository Layer.
 """
+
 from datetime import datetime, timezone
-from typing import List, Optional, Tuple
-from sqlalchemy import func, or_, select
+from typing import List, Optional
+
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.course import Course, CourseEnrollment, CourseModule, EnrollmentStatus, Lesson
-from app.models.progress import LessonProgress, LessonProgressStatus
-from app.models.skill import CourseSkill, Skill, SkillEvidence, UserSkill, get_level_from_percentage
+from app.models.skill import (
+    Skill,
+    UserSkill,
+    get_level_from_percentage,
+)
 
 
 class SkillRepository:
@@ -20,7 +24,7 @@ class SkillRepository:
         db: AsyncSession,
         *,
         category: Optional[str] = None,
-        search: Optional[str] = None
+        search: Optional[str] = None,
     ) -> List[Skill]:
         """Fetch all skills with optional domain category or search filters."""
         query = select(Skill).options(selectinload(Skill.courses))
@@ -40,10 +44,7 @@ class SkillRepository:
         return list(result.scalars().all())
 
     async def get_by_id_or_slug(
-        self,
-        db: AsyncSession,
-        *,
-        identifier: str
+        self, db: AsyncSession, *, identifier: str
     ) -> Optional[Skill]:
         """Fetch a single skill by UUID or slug."""
         query = (
@@ -55,39 +56,25 @@ class SkillRepository:
         return result.scalars().first()
 
     async def get_user_skills(
-        self,
-        db: AsyncSession,
-        *,
-        user_id: str
+        self, db: AsyncSession, *, user_id: str
     ) -> List[UserSkill]:
         """Fetch all user skill records for a student."""
         query = (
             select(UserSkill)
-            .options(
-                selectinload(UserSkill.skill).selectinload(Skill.courses)
-            )
+            .options(selectinload(UserSkill.skill).selectinload(Skill.courses))
             .where(UserSkill.user_id == user_id)
         )
         result = await db.execute(query)
         return list(result.scalars().all())
 
     async def get_user_skill(
-        self,
-        db: AsyncSession,
-        *,
-        user_id: str,
-        skill_id: str
+        self, db: AsyncSession, *, user_id: str, skill_id: str
     ) -> Optional[UserSkill]:
         """Fetch single user skill record."""
         query = (
             select(UserSkill)
-            .options(
-                selectinload(UserSkill.skill).selectinload(Skill.courses)
-            )
-            .where(
-                UserSkill.user_id == user_id,
-                UserSkill.skill_id == skill_id
-            )
+            .options(selectinload(UserSkill.skill).selectinload(Skill.courses))
+            .where(UserSkill.user_id == user_id, UserSkill.skill_id == skill_id)
         )
         result = await db.execute(query)
         return result.scalars().first()
@@ -99,7 +86,7 @@ class SkillRepository:
         user_id: str,
         skill_id: str,
         proficiency: float,
-        target_level: int = 4
+        target_level: int = 4,
     ) -> UserSkill:
         """Create or update a user skill proficiency record."""
         now = datetime.now(timezone.utc)

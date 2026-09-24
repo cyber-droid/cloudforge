@@ -6,15 +6,30 @@ IaC, GitOps, Observability, AI, and Security courses, modules, lessons, and reso
 
 Can be run via: `python -m app.db.seed`
 """
+
 import asyncio
 from datetime import datetime, timezone
 from typing import Any, Dict, List
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import AsyncSessionLocal
 from app.core.logging import logger
-from app.models.course import Course, CourseCategory, CourseDifficulty, CourseModule, Lesson, LessonResource
+from app.db.seed_projects_data import PROJECTS_DATA
+from app.models.certification import (
+    Certification,
+    CertificationLevel,
+    CertificationTraining,
+    PracticeQuestion,
+    UserCertificationEnrollment,
+)
+from app.models.course import (
+    Course,
+    CourseModule,
+    Lesson,
+    LessonResource,
+)
 from app.models.project import (
     Project,
     ProjectCourse,
@@ -26,7 +41,8 @@ from app.models.project import (
     StepProgressStatus,
     UserProjectEnrollment,
 )
-from app.db.seed_projects_data import PROJECTS_DATA
+from app.models.skill import Skill
+from app.models.user import User
 
 COURSES_DATA: List[Dict[str, Any]] = [
     {
@@ -38,7 +54,15 @@ COURSES_DATA: List[Dict[str, Any]] = [
         "thumbnail_url": "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&auto=format&fit=crop&q=80",
         "description": "Understand cloud computing fundamentals, service models, regions, availability zones, compute, storage, networking, identity and cloud security.",
         "long_description": "A comprehensive, engineering-first introduction to modern multi-cloud architectures. Learn how AWS, Azure, and Google Cloud organize hyperscale infrastructure, design resilient VPC networks, structure object storage, and configure secure IAM policies according to the Well-Architected Framework.",
-        "technologies": ["AWS", "Azure", "Cloud Fundamentals", "VPC", "IAM", "S3", "FinOps"],
+        "technologies": [
+            "AWS",
+            "Azure",
+            "Cloud Fundamentals",
+            "VPC",
+            "IAM",
+            "S3",
+            "FinOps",
+        ],
         "learning_outcomes": [
             "Deconstruct IaaS, PaaS, SaaS across major hyperscalers",
             "Design fault-tolerant architectures across Availability Zones and Regions",
@@ -60,27 +84,144 @@ COURSES_DATA: List[Dict[str, Any]] = [
                         "slug": "evolution-distributed-systems",
                         "lesson_type": "theory",
                         "estimated_minutes": 10,
-                        "content": "### Learning Objectives\n- Trace the evolution from physical bare-metal to modern cloud computing.\n- Understand multitenancy and virtualization primitives.\n\n### Concept Explanation\nCloud computing transforms capital expenditure (CapEx) into variable operational expenditure (OpEx). Hyperscalers pool physical compute, storage, and networking resources across data centers.\n\n### Key Takeaways\n- Elasticity allows dynamic scale on demand.\n- Economies of scale drive down infrastructure cost."
+                        "content": "### Learning Objectives\n- Trace the evolution from physical bare-metal to modern cloud computing.\n- Understand multitenancy and virtualization primitives.\n\n### Concept Explanation\nCloud computing transforms capital expenditure (CapEx) into variable operational expenditure (OpEx). Hyperscalers pool physical compute, storage, and networking resources across data centers.\n\n### Key Takeaways\n- Elasticity allows dynamic scale on demand.\n- Economies of scale drive down infrastructure cost.",
                     },
                     {
                         "title": "Shared Responsibility Model Deep-Dive",
                         "slug": "shared-responsibility-model",
                         "lesson_type": "theory",
                         "estimated_minutes": 15,
-                        "content": "### Learning Objectives\n- Demarcate customer vs cloud provider security boundaries across IaaS, PaaS, and SaaS.\n\n### Concept Explanation\nIn IaaS, the provider manages the hardware, hypervisor, and physical facilities. The customer owns OS patching, networking rules, data encryption, and identity configuration.\n\n### Common Mistakes\n- Assuming the cloud provider automatically backups and protects application data."
-                    }
-                ]
+                        "content": "### Learning Objectives\n- Demarcate customer vs cloud provider security boundaries across IaaS, PaaS, and SaaS.\n\n### Concept Explanation\nIn IaaS, the provider manages the hardware, hypervisor, and physical facilities. The customer owns OS patching, networking rules, data encryption, and identity configuration.\n\n### Common Mistakes\n- Assuming the cloud provider automatically backups and protects application data.",
+                    },
+                ],
             },
-            {"module_number": "02", "title": "Regions & Availability Zones", "description": "Global infrastructure resilience patterns.", "lessons": [{"title": "Hyperscaler Global Backbone Architecture", "slug": "global-backbone", "lesson_type": "theory", "estimated_minutes": 12, "content": "Learn how high-speed fiber ring backbones interconnect Availability Zones."}]},
-            {"module_number": "03", "title": "Compute", "description": "Virtual instances, containers, and serverless.", "lessons": [{"title": "Virtualization & Hypervisor Mechanics", "slug": "virtualization-mechanics", "lesson_type": "theory", "estimated_minutes": 14, "content": "KVM, Nitro, and modern hypervisors."}]},
-            {"module_number": "04", "title": "Storage", "description": "Block, file, and object storage semantics.", "lessons": [{"title": "S3 & Object Storage Consistency Models", "slug": "s3-consistency", "lesson_type": "theory", "estimated_minutes": 14, "content": "Strong read-after-write consistency in modern object stores."}]},
-            {"module_number": "05", "title": "Networking", "description": "VPCs, CIDRs, subnets, route tables, and gateways.", "lessons": [{"title": "CIDR Blocks & Route Tables", "slug": "cidr-routing", "lesson_type": "hands-on", "estimated_minutes": 18, "content": "Designing IP address space for enterprise cloud infrastructure."}]},
-            {"module_number": "06", "title": "Identity & Access", "description": "IAM policies, RBAC, and federated SSO.", "lessons": [{"title": "Principle of Least Privilege in IAM", "slug": "least-privilege-iam", "lesson_type": "theory", "estimated_minutes": 15, "content": "Crafting granular JSON IAM policies."}]},
-            {"module_number": "07", "title": "Cloud Security", "description": "Encryption at rest, in transit, and KMS.", "lessons": [{"title": "KMS Envelope Encryption", "slug": "kms-envelope-encryption", "lesson_type": "theory", "estimated_minutes": 15, "content": "Customer Master Keys (CMKs) and data key generation."}]},
-            {"module_number": "08", "title": "Cost Management", "description": "FinOps, reservation strategies, and tagging.", "lessons": [{"title": "Cloud Cost Allocation & FinOps Framework", "slug": "finops-framework", "lesson_type": "theory", "estimated_minutes": 12, "content": "Cost center attribution and savings plans."}]},
-            {"module_number": "09", "title": "Hands-on Architecture", "description": "Designing multi-tier resilient architectures.", "lessons": [{"title": "3-Tier Resilient Web Architecture", "slug": "3-tier-architecture", "lesson_type": "hands-on", "estimated_minutes": 25, "content": "Deploying web, application, and database tiers across multiple AZs."}]},
-            {"module_number": "10", "title": "Final Assessment", "description": "Capstone assessment and certification prep.", "lessons": [{"title": "Cloud Architecture Comprehensive Exam", "slug": "cloud-architecture-exam", "lesson_type": "quiz", "estimated_minutes": 30, "content": "Test your mastery of cloud computing fundamentals."}]}
-        ]
+            {
+                "module_number": "02",
+                "title": "Regions & Availability Zones",
+                "description": "Global infrastructure resilience patterns.",
+                "lessons": [
+                    {
+                        "title": "Hyperscaler Global Backbone Architecture",
+                        "slug": "global-backbone",
+                        "lesson_type": "theory",
+                        "estimated_minutes": 12,
+                        "content": "Learn how high-speed fiber ring backbones interconnect Availability Zones.",
+                    }
+                ],
+            },
+            {
+                "module_number": "03",
+                "title": "Compute",
+                "description": "Virtual instances, containers, and serverless.",
+                "lessons": [
+                    {
+                        "title": "Virtualization & Hypervisor Mechanics",
+                        "slug": "virtualization-mechanics",
+                        "lesson_type": "theory",
+                        "estimated_minutes": 14,
+                        "content": "KVM, Nitro, and modern hypervisors.",
+                    }
+                ],
+            },
+            {
+                "module_number": "04",
+                "title": "Storage",
+                "description": "Block, file, and object storage semantics.",
+                "lessons": [
+                    {
+                        "title": "S3 & Object Storage Consistency Models",
+                        "slug": "s3-consistency",
+                        "lesson_type": "theory",
+                        "estimated_minutes": 14,
+                        "content": "Strong read-after-write consistency in modern object stores.",
+                    }
+                ],
+            },
+            {
+                "module_number": "05",
+                "title": "Networking",
+                "description": "VPCs, CIDRs, subnets, route tables, and gateways.",
+                "lessons": [
+                    {
+                        "title": "CIDR Blocks & Route Tables",
+                        "slug": "cidr-routing",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 18,
+                        "content": "Designing IP address space for enterprise cloud infrastructure.",
+                    }
+                ],
+            },
+            {
+                "module_number": "06",
+                "title": "Identity & Access",
+                "description": "IAM policies, RBAC, and federated SSO.",
+                "lessons": [
+                    {
+                        "title": "Principle of Least Privilege in IAM",
+                        "slug": "least-privilege-iam",
+                        "lesson_type": "theory",
+                        "estimated_minutes": 15,
+                        "content": "Crafting granular JSON IAM policies.",
+                    }
+                ],
+            },
+            {
+                "module_number": "07",
+                "title": "Cloud Security",
+                "description": "Encryption at rest, in transit, and KMS.",
+                "lessons": [
+                    {
+                        "title": "KMS Envelope Encryption",
+                        "slug": "kms-envelope-encryption",
+                        "lesson_type": "theory",
+                        "estimated_minutes": 15,
+                        "content": "Customer Master Keys (CMKs) and data key generation.",
+                    }
+                ],
+            },
+            {
+                "module_number": "08",
+                "title": "Cost Management",
+                "description": "FinOps, reservation strategies, and tagging.",
+                "lessons": [
+                    {
+                        "title": "Cloud Cost Allocation & FinOps Framework",
+                        "slug": "finops-framework",
+                        "lesson_type": "theory",
+                        "estimated_minutes": 12,
+                        "content": "Cost center attribution and savings plans.",
+                    }
+                ],
+            },
+            {
+                "module_number": "09",
+                "title": "Hands-on Architecture",
+                "description": "Designing multi-tier resilient architectures.",
+                "lessons": [
+                    {
+                        "title": "3-Tier Resilient Web Architecture",
+                        "slug": "3-tier-architecture",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 25,
+                        "content": "Deploying web, application, and database tiers across multiple AZs.",
+                    }
+                ],
+            },
+            {
+                "module_number": "10",
+                "title": "Final Assessment",
+                "description": "Capstone assessment and certification prep.",
+                "lessons": [
+                    {
+                        "title": "Cloud Architecture Comprehensive Exam",
+                        "slug": "cloud-architecture-exam",
+                        "lesson_type": "quiz",
+                        "estimated_minutes": 30,
+                        "content": "Test your mastery of cloud computing fundamentals.",
+                    }
+                ],
+            },
+        ],
     },
     {
         "slug": "devops-engineering-foundations",
@@ -91,7 +232,15 @@ COURSES_DATA: List[Dict[str, Any]] = [
         "thumbnail_url": "https://images.unsplash.com/photo-1618401471353-b98aedd04e11?w=800&auto=format&fit=crop&q=80",
         "description": "Master core Linux commands, Git workflows, CI/CD automation, Docker containerization, IaC, and monitoring pipelines.",
         "long_description": "Bridge the gap between development and operations. Learn how modern tech companies ship reliable software with automated test pipelines, trunk-based Git, Docker container builds, and infrastructure telemetry.",
-        "technologies": ["Linux", "Git", "GitHub Actions", "Docker", "CI/CD", "Prometheus", "Bash"],
+        "technologies": [
+            "Linux",
+            "Git",
+            "GitHub Actions",
+            "Docker",
+            "CI/CD",
+            "Prometheus",
+            "Bash",
+        ],
         "learning_outcomes": [
             "Master Linux system internals, process management, and shell scripting",
             "Implement trunk-based development with semantic versioning",
@@ -103,19 +252,175 @@ COURSES_DATA: List[Dict[str, Any]] = [
         "instructor_role": "Staff SRE, ex-GitLab",
         "instructor_avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
         "modules": [
-            {"module_number": "01", "title": "Linux Fundamentals", "description": "Linux kernel, systemd, networking tools.", "lessons": [{"title": "Linux Processes, Signals & Systemd", "slug": "linux-processes", "lesson_type": "hands-on", "estimated_minutes": 15, "content": "Process lifecycle, SIGTERM vs SIGKILL, and systemd units."}]},
-            {"module_number": "02", "title": "Git", "description": "Git internals, rebasing, bisecting.", "lessons": [{"title": "Git DAG Internals & Interactive Rebase", "slug": "git-internals", "lesson_type": "hands-on", "estimated_minutes": 15, "content": "Understanding commits as immutable snapshot nodes in a Directed Acyclic Graph."}]},
-            {"module_number": "03", "title": "GitHub", "description": "Branch protection, PR reviews, codeowners.", "lessons": [{"title": "Branch Protection & PR Workflows", "slug": "github-workflows", "lesson_type": "theory", "estimated_minutes": 10, "content": "Setting up status checks and CODEOWNERS."}]},
-            {"module_number": "04", "title": "CI/CD", "description": "Continuous integration and deployment pipelines.", "lessons": [{"title": "Designing Deterministic CI Pipelines", "slug": "ci-pipelines", "lesson_type": "hands-on", "estimated_minutes": 20, "content": "Caching dependencies and parallelizing test stages."}]},
-            {"module_number": "05", "title": "Docker", "description": "Container runtimes, namespaces, multi-stage builds.", "lessons": [{"title": "Multi-Stage Dockerfile Optimization", "slug": "docker-multistage", "lesson_type": "hands-on", "estimated_minutes": 20, "content": "Shrinking container images from 1GB to 25MB."}]},
-            {"module_number": "06", "title": "Container Registries", "description": "Artifact repositories, OCI standards, image signing.", "lessons": [{"title": "OCI Registries & Image Vulnerability Scanning", "slug": "oci-registries", "lesson_type": "theory", "estimated_minutes": 12, "content": "Trivy scans and container registry webhooks."}]},
-            {"module_number": "07", "title": "Infrastructure as Code", "description": "Declarative vs imperative infrastructure.", "lessons": [{"title": "Declarative Infrastructure Principles", "slug": "iac-principles", "lesson_type": "theory", "estimated_minutes": 15, "content": "Idempotency and drift detection."}]},
-            {"module_number": "08", "title": "Configuration Management", "description": "Ansible and configuration drift elimination.", "lessons": [{"title": "Idempotent Server Provisioning with Ansible", "slug": "ansible-provisioning", "lesson_type": "hands-on", "estimated_minutes": 18, "content": "Playbooks and Jinja2 templates."}]},
-            {"module_number": "09", "title": "Kubernetes Introduction", "description": "Container orchestration fundamentals.", "lessons": [{"title": "Why Orchestration Matters", "slug": "why-orchestration", "lesson_type": "theory", "estimated_minutes": 15, "content": "Scheduling, reconciliation loops, and self-healing."}]},
-            {"module_number": "10", "title": "Monitoring", "description": "Metrics aggregation and golden signals.", "lessons": [{"title": "The Four Golden Signals of Monitoring", "slug": "four-golden-signals", "lesson_type": "theory", "estimated_minutes": 14, "content": "Latency, Traffic, Errors, and Saturation."}]},
-            {"module_number": "11", "title": "Logging", "description": "Structured logging and log aggregators.", "lessons": [{"title": "Log Aggregation & Fluent Bit", "slug": "log-aggregation", "lesson_type": "hands-on", "estimated_minutes": 16, "content": "Parsing JSON logs and streaming to storage."}]},
-            {"module_number": "12", "title": "DevOps Best Practices", "description": "Incident postmortems and blameless culture.", "lessons": [{"title": "Blameless Post-Mortem Engineering", "slug": "blameless-postmortems", "lesson_type": "theory", "estimated_minutes": 15, "content": "Creating high-trust learning organizations."}]}
-        ]
+            {
+                "module_number": "01",
+                "title": "Linux Fundamentals",
+                "description": "Linux kernel, systemd, networking tools.",
+                "lessons": [
+                    {
+                        "title": "Linux Processes, Signals & Systemd",
+                        "slug": "linux-processes",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 15,
+                        "content": "Process lifecycle, SIGTERM vs SIGKILL, and systemd units.",
+                    }
+                ],
+            },
+            {
+                "module_number": "02",
+                "title": "Git",
+                "description": "Git internals, rebasing, bisecting.",
+                "lessons": [
+                    {
+                        "title": "Git DAG Internals & Interactive Rebase",
+                        "slug": "git-internals",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 15,
+                        "content": "Understanding commits as immutable snapshot nodes in a Directed Acyclic Graph.",
+                    }
+                ],
+            },
+            {
+                "module_number": "03",
+                "title": "GitHub",
+                "description": "Branch protection, PR reviews, codeowners.",
+                "lessons": [
+                    {
+                        "title": "Branch Protection & PR Workflows",
+                        "slug": "github-workflows",
+                        "lesson_type": "theory",
+                        "estimated_minutes": 10,
+                        "content": "Setting up status checks and CODEOWNERS.",
+                    }
+                ],
+            },
+            {
+                "module_number": "04",
+                "title": "CI/CD",
+                "description": "Continuous integration and deployment pipelines.",
+                "lessons": [
+                    {
+                        "title": "Designing Deterministic CI Pipelines",
+                        "slug": "ci-pipelines",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 20,
+                        "content": "Caching dependencies and parallelizing test stages.",
+                    }
+                ],
+            },
+            {
+                "module_number": "05",
+                "title": "Docker",
+                "description": "Container runtimes, namespaces, multi-stage builds.",
+                "lessons": [
+                    {
+                        "title": "Multi-Stage Dockerfile Optimization",
+                        "slug": "docker-multistage",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 20,
+                        "content": "Shrinking container images from 1GB to 25MB.",
+                    }
+                ],
+            },
+            {
+                "module_number": "06",
+                "title": "Container Registries",
+                "description": "Artifact repositories, OCI standards, image signing.",
+                "lessons": [
+                    {
+                        "title": "OCI Registries & Image Vulnerability Scanning",
+                        "slug": "oci-registries",
+                        "lesson_type": "theory",
+                        "estimated_minutes": 12,
+                        "content": "Trivy scans and container registry webhooks.",
+                    }
+                ],
+            },
+            {
+                "module_number": "07",
+                "title": "Infrastructure as Code",
+                "description": "Declarative vs imperative infrastructure.",
+                "lessons": [
+                    {
+                        "title": "Declarative Infrastructure Principles",
+                        "slug": "iac-principles",
+                        "lesson_type": "theory",
+                        "estimated_minutes": 15,
+                        "content": "Idempotency and drift detection.",
+                    }
+                ],
+            },
+            {
+                "module_number": "08",
+                "title": "Configuration Management",
+                "description": "Ansible and configuration drift elimination.",
+                "lessons": [
+                    {
+                        "title": "Idempotent Server Provisioning with Ansible",
+                        "slug": "ansible-provisioning",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 18,
+                        "content": "Playbooks and Jinja2 templates.",
+                    }
+                ],
+            },
+            {
+                "module_number": "09",
+                "title": "Kubernetes Introduction",
+                "description": "Container orchestration fundamentals.",
+                "lessons": [
+                    {
+                        "title": "Why Orchestration Matters",
+                        "slug": "why-orchestration",
+                        "lesson_type": "theory",
+                        "estimated_minutes": 15,
+                        "content": "Scheduling, reconciliation loops, and self-healing.",
+                    }
+                ],
+            },
+            {
+                "module_number": "10",
+                "title": "Monitoring",
+                "description": "Metrics aggregation and golden signals.",
+                "lessons": [
+                    {
+                        "title": "The Four Golden Signals of Monitoring",
+                        "slug": "four-golden-signals",
+                        "lesson_type": "theory",
+                        "estimated_minutes": 14,
+                        "content": "Latency, Traffic, Errors, and Saturation.",
+                    }
+                ],
+            },
+            {
+                "module_number": "11",
+                "title": "Logging",
+                "description": "Structured logging and log aggregators.",
+                "lessons": [
+                    {
+                        "title": "Log Aggregation & Fluent Bit",
+                        "slug": "log-aggregation",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 16,
+                        "content": "Parsing JSON logs and streaming to storage.",
+                    }
+                ],
+            },
+            {
+                "module_number": "12",
+                "title": "DevOps Best Practices",
+                "description": "Incident postmortems and blameless culture.",
+                "lessons": [
+                    {
+                        "title": "Blameless Post-Mortem Engineering",
+                        "slug": "blameless-postmortems",
+                        "lesson_type": "theory",
+                        "estimated_minutes": 15,
+                        "content": "Creating high-trust learning organizations.",
+                    }
+                ],
+            },
+        ],
     },
     {
         "slug": "kubernetes-engineering",
@@ -126,7 +431,15 @@ COURSES_DATA: List[Dict[str, Any]] = [
         "thumbnail_url": "https://images.unsplash.com/photo-1667372393119-3d4c48d07fc9?w=800&auto=format&fit=crop&q=80",
         "description": "Deep-dive Kubernetes architecture, Deployments, Services, Ingress, RBAC, Network Policies, Helm, and production break-fix patterns.",
         "long_description": "Become an expert in managing enterprise Kubernetes clusters. Learn how kube-apiserver, etcd, kube-scheduler, and kubelet coordinate distributed state, write production YAML manifests, implement zero-downtime rollouts, and troubleshoot CrashLoopBackOff and OOMKilled incidents.",
-        "technologies": ["Kubernetes", "Docker", "Helm", "kubectl", "Envoy", "etcd", "Calico"],
+        "technologies": [
+            "Kubernetes",
+            "Docker",
+            "Helm",
+            "kubectl",
+            "Envoy",
+            "etcd",
+            "Calico",
+        ],
         "learning_outcomes": [
             "Deconstruct Kubernetes control plane and node agent internal components",
             "Write robust declarative manifests for Deployments, StatefulSets, and DaemonSets",
@@ -148,12 +461,38 @@ COURSES_DATA: List[Dict[str, Any]] = [
                         "slug": "control-plane-internals",
                         "lesson_type": "theory",
                         "estimated_minutes": 15,
-                        "content": "### Learning Objectives\n- Understand how the API server serves as the single source of truth.\n- Learn how etcd maintains distributed consensus with Raft.\n\n### Concept Explanation\nThe Kubernetes control plane maintains the desired state of the cluster. When you submit a manifest, `kube-apiserver` validates it, persists it to `etcd`, and informs controllers via watch streams.\n\n### Key Takeaways\n- Only `kube-apiserver` talks directly to `etcd`.\n- Controllers run continuous reconciliation loops."
+                        "content": "### Learning Objectives\n- Understand how the API server serves as the single source of truth.\n- Learn how etcd maintains distributed consensus with Raft.\n\n### Concept Explanation\nThe Kubernetes control plane maintains the desired state of the cluster. When you submit a manifest, `kube-apiserver` validates it, persists it to `etcd`, and informs controllers via watch streams.\n\n### Key Takeaways\n- Only `kube-apiserver` talks directly to `etcd`.\n- Controllers run continuous reconciliation loops.",
                     }
-                ]
+                ],
             },
-            {"module_number": "02", "title": "Pods", "description": "Pod lifecycle, pause containers, multi-container patterns.", "lessons": [{"title": "Pod Lifecycle & Init Containers", "slug": "pod-lifecycle", "lesson_type": "hands-on", "estimated_minutes": 15, "content": "Sidecars, Ambassadors, and Init container sequencing."}]},
-            {"module_number": "03", "title": "Deployments", "description": "Rolling updates, rollbacks, and ReplicaSets.", "lessons": [{"title": "Zero-Downtime Rolling Updates & MaxSurge", "slug": "rolling-updates", "lesson_type": "hands-on", "estimated_minutes": 18, "content": "Tuning maxUnavailable and maxSurge parameters."}]},
+            {
+                "module_number": "02",
+                "title": "Pods",
+                "description": "Pod lifecycle, pause containers, multi-container patterns.",
+                "lessons": [
+                    {
+                        "title": "Pod Lifecycle & Init Containers",
+                        "slug": "pod-lifecycle",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 15,
+                        "content": "Sidecars, Ambassadors, and Init container sequencing.",
+                    }
+                ],
+            },
+            {
+                "module_number": "03",
+                "title": "Deployments",
+                "description": "Rolling updates, rollbacks, and ReplicaSets.",
+                "lessons": [
+                    {
+                        "title": "Zero-Downtime Rolling Updates & MaxSurge",
+                        "slug": "rolling-updates",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 18,
+                        "content": "Tuning maxUnavailable and maxSurge parameters.",
+                    }
+                ],
+            },
             {
                 "module_number": "04",
                 "title": "Services",
@@ -164,21 +503,151 @@ COURSES_DATA: List[Dict[str, Any]] = [
                         "slug": "understanding-clusterip",
                         "lesson_type": "hands-on",
                         "estimated_minutes": 15,
-                        "content": "### Learning Objectives\n- Understand internal service discovery and virtual IPs.\n- Learn how iptables/IPVS routes traffic to healthy Pod endpoints.\n\n### Concept Explanation\nA `ClusterIP` service exposes Pods on an internal IP address reachable only within the cluster.\n\n### Example YAML\n```yaml\napiVersion: v1\nkind: Service\nmetadata:\n  name: cloudforge-api\nspec:\n  selector:\n    app: cloudforge-api\n  ports:\n    - port: 80\n      targetPort: 8000\n  type: ClusterIP\n```\n\n### Common Mistakes\n- Mismatching the `spec.selector` labels with the target Pod labels."
+                        "content": "### Learning Objectives\n- Understand internal service discovery and virtual IPs.\n- Learn how iptables/IPVS routes traffic to healthy Pod endpoints.\n\n### Concept Explanation\nA `ClusterIP` service exposes Pods on an internal IP address reachable only within the cluster.\n\n### Example YAML\n```yaml\napiVersion: v1\nkind: Service\nmetadata:\n  name: cloudforge-api\nspec:\n  selector:\n    app: cloudforge-api\n  ports:\n    - port: 80\n      targetPort: 8000\n  type: ClusterIP\n```\n\n### Common Mistakes\n- Mismatching the `spec.selector` labels with the target Pod labels.",
                     }
-                ]
+                ],
             },
-            {"module_number": "05", "title": "ConfigMaps", "description": "Decoupling configuration from container images.", "lessons": [{"title": "Dynamic Configuration with ConfigMaps", "slug": "configmaps-volumes", "lesson_type": "hands-on", "estimated_minutes": 12, "content": "Mounting ConfigMaps as environment variables and volume files."}]},
-            {"module_number": "06", "title": "Secrets", "description": "Base64 encoding vs envelope encryption with KMS.", "lessons": [{"title": "Secret Management & External Secrets Operator", "slug": "secret-management", "lesson_type": "hands-on", "estimated_minutes": 16, "content": "Syncing secrets from AWS Secrets Manager / Vault."}]},
-            {"module_number": "07", "title": "Ingress", "description": "Ingress controllers, TLS termination, path routing.", "lessons": [{"title": "NGINX Ingress Controller & Let's Encrypt TLS", "slug": "ingress-tls", "lesson_type": "hands-on", "estimated_minutes": 20, "content": "Path routing and cert-manager integration."}]},
-            {"module_number": "08", "title": "Health Probes", "description": "Liveness, readiness, and startup probes.", "lessons": [{"title": "Tuning Liveness & Readiness Probes", "slug": "health-probes", "lesson_type": "hands-on", "estimated_minutes": 15, "content": "Avoiding premature pod restarts during traffic spikes."}]},
-            {"module_number": "09", "title": "Resource Management", "description": "CPU/Memory requests, limits, QoS classes.", "lessons": [{"title": "Guaranteed vs Burstable QoS Classes", "slug": "qos-classes", "lesson_type": "theory", "estimated_minutes": 15, "content": "OOMKiller priorities and CFS CPU throttling."}]},
-            {"module_number": "10", "title": "RBAC", "description": "ServiceAccounts, Roles, and RoleBindings.", "lessons": [{"title": "Enforcing Least-Privilege with RBAC", "slug": "k8s-rbac", "lesson_type": "hands-on", "estimated_minutes": 18, "content": "Creating granular ClusterRoles for CI/CD runners."}]},
-            {"module_number": "11", "title": "Network Policies", "description": "Calico, Cilium, egress and ingress isolation.", "lessons": [{"title": "Zero-Trust Microsegmentation with NetworkPolicies", "slug": "network-policies", "lesson_type": "hands-on", "estimated_minutes": 20, "content": "Default-deny ingress rules and namespace selectors."}]},
-            {"module_number": "12", "title": "Helm", "description": "Package management, templates, values overrides.", "lessons": [{"title": "Authoring Enterprise Helm Charts", "slug": "helm-charts", "lesson_type": "hands-on", "estimated_minutes": 22, "content": "Dry-run rendering, subcharts, and release management."}]},
-            {"module_number": "13", "title": "Troubleshooting", "description": "CrashLoopBackOff, ImagePullBackOff, Evictions.", "lessons": [{"title": "Diagnostic Workflow for CrashLoopBackOff", "slug": "troubleshoot-crashloop", "lesson_type": "hands-on", "estimated_minutes": 25, "content": "Using kubectl describe, logs -p, and ephemeral debug containers."}]},
-            {"module_number": "14", "title": "Production Patterns", "description": "Topology spread constraints, PDBs, HPA.", "lessons": [{"title": "High Availability with PodDisruptionBudgets & HPA", "slug": "production-patterns", "lesson_type": "hands-on", "estimated_minutes": 20, "content": "Autoscaling with Custom Metrics API."}]}
-        ]
+            {
+                "module_number": "05",
+                "title": "ConfigMaps",
+                "description": "Decoupling configuration from container images.",
+                "lessons": [
+                    {
+                        "title": "Dynamic Configuration with ConfigMaps",
+                        "slug": "configmaps-volumes",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 12,
+                        "content": "Mounting ConfigMaps as environment variables and volume files.",
+                    }
+                ],
+            },
+            {
+                "module_number": "06",
+                "title": "Secrets",
+                "description": "Base64 encoding vs envelope encryption with KMS.",
+                "lessons": [
+                    {
+                        "title": "Secret Management & External Secrets Operator",
+                        "slug": "secret-management",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 16,
+                        "content": "Syncing secrets from AWS Secrets Manager / Vault.",
+                    }
+                ],
+            },
+            {
+                "module_number": "07",
+                "title": "Ingress",
+                "description": "Ingress controllers, TLS termination, path routing.",
+                "lessons": [
+                    {
+                        "title": "NGINX Ingress Controller & Let's Encrypt TLS",
+                        "slug": "ingress-tls",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 20,
+                        "content": "Path routing and cert-manager integration.",
+                    }
+                ],
+            },
+            {
+                "module_number": "08",
+                "title": "Health Probes",
+                "description": "Liveness, readiness, and startup probes.",
+                "lessons": [
+                    {
+                        "title": "Tuning Liveness & Readiness Probes",
+                        "slug": "health-probes",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 15,
+                        "content": "Avoiding premature pod restarts during traffic spikes.",
+                    }
+                ],
+            },
+            {
+                "module_number": "09",
+                "title": "Resource Management",
+                "description": "CPU/Memory requests, limits, QoS classes.",
+                "lessons": [
+                    {
+                        "title": "Guaranteed vs Burstable QoS Classes",
+                        "slug": "qos-classes",
+                        "lesson_type": "theory",
+                        "estimated_minutes": 15,
+                        "content": "OOMKiller priorities and CFS CPU throttling.",
+                    }
+                ],
+            },
+            {
+                "module_number": "10",
+                "title": "RBAC",
+                "description": "ServiceAccounts, Roles, and RoleBindings.",
+                "lessons": [
+                    {
+                        "title": "Enforcing Least-Privilege with RBAC",
+                        "slug": "k8s-rbac",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 18,
+                        "content": "Creating granular ClusterRoles for CI/CD runners.",
+                    }
+                ],
+            },
+            {
+                "module_number": "11",
+                "title": "Network Policies",
+                "description": "Calico, Cilium, egress and ingress isolation.",
+                "lessons": [
+                    {
+                        "title": "Zero-Trust Microsegmentation with NetworkPolicies",
+                        "slug": "network-policies",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 20,
+                        "content": "Default-deny ingress rules and namespace selectors.",
+                    }
+                ],
+            },
+            {
+                "module_number": "12",
+                "title": "Helm",
+                "description": "Package management, templates, values overrides.",
+                "lessons": [
+                    {
+                        "title": "Authoring Enterprise Helm Charts",
+                        "slug": "helm-charts",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 22,
+                        "content": "Dry-run rendering, subcharts, and release management.",
+                    }
+                ],
+            },
+            {
+                "module_number": "13",
+                "title": "Troubleshooting",
+                "description": "CrashLoopBackOff, ImagePullBackOff, Evictions.",
+                "lessons": [
+                    {
+                        "title": "Diagnostic Workflow for CrashLoopBackOff",
+                        "slug": "troubleshoot-crashloop",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 25,
+                        "content": "Using kubectl describe, logs -p, and ephemeral debug containers.",
+                    }
+                ],
+            },
+            {
+                "module_number": "14",
+                "title": "Production Patterns",
+                "description": "Topology spread constraints, PDBs, HPA.",
+                "lessons": [
+                    {
+                        "title": "High Availability with PodDisruptionBudgets & HPA",
+                        "slug": "production-patterns",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 20,
+                        "content": "Autoscaling with Custom Metrics API.",
+                    }
+                ],
+            },
+        ],
     },
     {
         "slug": "devsecops-engineering",
@@ -189,7 +658,15 @@ COURSES_DATA: List[Dict[str, Any]] = [
         "thumbnail_url": "https://images.unsplash.com/photo-1563986768609-322da13575f3?w=800&auto=format&fit=crop&q=80",
         "description": "Shift security left. Automate SAST, secret detection, container image scanning, SBOM generation, and admission control.",
         "long_description": "Integrate automated security gates into every phase of your software supply chain. Learn to enforce policy-as-code with OPA Gatekeeper, sign container images with Cosign, and generate machine-readable Software Bill of Materials (SBOMs).",
-        "technologies": ["Trivy", "Cosign", "Kyverno", "OPA Gatekeeper", "SonarQube", "Syft", "Gitleaks"],
+        "technologies": [
+            "Trivy",
+            "Cosign",
+            "Kyverno",
+            "OPA Gatekeeper",
+            "SonarQube",
+            "Syft",
+            "Gitleaks",
+        ],
         "learning_outcomes": [
             "Implement automated secret scanning in Git pre-commit hooks and CI pipelines",
             "Scan dependencies for CVEs and generate SPDX / CycloneDX SBOMs",
@@ -201,18 +678,161 @@ COURSES_DATA: List[Dict[str, Any]] = [
         "instructor_role": "Head of Security Architecture, CloudForge",
         "instructor_avatar": "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80",
         "modules": [
-            {"module_number": "01", "title": "DevSecOps Fundamentals", "description": "Shifting security left.", "lessons": [{"title": "Security in the CI/CD Pipeline", "slug": "security-cicd", "lesson_type": "theory", "estimated_minutes": 15, "content": "Continuous security verification."}]},
-            {"module_number": "02", "title": "Secure Git", "description": "Preventing credentials in source code.", "lessons": [{"title": "Gitleaks Pre-Commit Hooks", "slug": "gitleaks-precommit", "lesson_type": "hands-on", "estimated_minutes": 15, "content": "Detecting API keys before they hit GitHub."}]},
-            {"module_number": "03", "title": "Secret Management", "description": "HashiCorp Vault & AWS Secrets Manager.", "lessons": [{"title": "Dynamic Secrets with HashiCorp Vault", "slug": "vault-dynamic-secrets", "lesson_type": "hands-on", "estimated_minutes": 20, "content": "Short-lived database credentials."}]},
-            {"module_number": "04", "title": "SAST", "description": "Static Application Security Testing.", "lessons": [{"title": "Static Code Analysis with Semgrep", "slug": "sast-semgrep", "lesson_type": "hands-on", "estimated_minutes": 18, "content": "Writing custom SAST rules for security anti-patterns."}]},
-            {"module_number": "05", "title": "Dependency Security", "description": "Software composition analysis (SCA).", "lessons": [{"title": "SCA & Automated Dependabot Remediation", "slug": "dependency-sca", "lesson_type": "theory", "estimated_minutes": 14, "content": "Patching transitive vulnerabilities."}]},
-            {"module_number": "06", "title": "Container Security", "description": "Rootless containers, distroless images.", "lessons": [{"title": "Distroless & Non-Root Containerization", "slug": "distroless-containers", "lesson_type": "hands-on", "estimated_minutes": 18, "content": "Reducing attack surface to bare binaries."}]},
-            {"module_number": "07", "title": "Image Scanning", "description": "Trivy, Clair, and vulnerability databases.", "lessons": [{"title": "Automated Trivy Vulnerability Gates", "slug": "trivy-scanning", "lesson_type": "hands-on", "estimated_minutes": 16, "content": "Failing CI builds on CVSS > 7.0."}]},
-            {"module_number": "08", "title": "SBOM", "description": "Software Bill of Materials standards.", "lessons": [{"title": "Generating SBOMs with Syft & Grype", "slug": "sbom-generation", "lesson_type": "hands-on", "estimated_minutes": 15, "content": "CycloneDX formatting for supply chain audits."}]},
-            {"module_number": "09", "title": "Security Gates", "description": "Automated policy gates in GitHub Actions.", "lessons": [{"title": "Building Branch Protection Security Gates", "slug": "branch-security-gates", "lesson_type": "hands-on", "estimated_minutes": 15, "content": "Integrating security test results into pull requests."}]},
-            {"module_number": "10", "title": "Kubernetes Security", "description": "Kyverno, OPA Gatekeeper, admission control.", "lessons": [{"title": "Enforcing Pod Security Standards with Kyverno", "slug": "kyverno-pss", "lesson_type": "hands-on", "estimated_minutes": 22, "content": "Restricted Pod Security Standard policies."}]},
-            {"module_number": "11", "title": "Security Monitoring", "description": "Falco runtime threat detection.", "lessons": [{"title": "Runtime Kernel Threat Detection with Falco", "slug": "falco-runtime", "lesson_type": "hands-on", "estimated_minutes": 20, "content": "Detecting privilege escalation and unauthorized shell spawns."}]}
-        ]
+            {
+                "module_number": "01",
+                "title": "DevSecOps Fundamentals",
+                "description": "Shifting security left.",
+                "lessons": [
+                    {
+                        "title": "Security in the CI/CD Pipeline",
+                        "slug": "security-cicd",
+                        "lesson_type": "theory",
+                        "estimated_minutes": 15,
+                        "content": "Continuous security verification.",
+                    }
+                ],
+            },
+            {
+                "module_number": "02",
+                "title": "Secure Git",
+                "description": "Preventing credentials in source code.",
+                "lessons": [
+                    {
+                        "title": "Gitleaks Pre-Commit Hooks",
+                        "slug": "gitleaks-precommit",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 15,
+                        "content": "Detecting API keys before they hit GitHub.",
+                    }
+                ],
+            },
+            {
+                "module_number": "03",
+                "title": "Secret Management",
+                "description": "HashiCorp Vault & AWS Secrets Manager.",
+                "lessons": [
+                    {
+                        "title": "Dynamic Secrets with HashiCorp Vault",
+                        "slug": "vault-dynamic-secrets",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 20,
+                        "content": "Short-lived database credentials.",
+                    }
+                ],
+            },
+            {
+                "module_number": "04",
+                "title": "SAST",
+                "description": "Static Application Security Testing.",
+                "lessons": [
+                    {
+                        "title": "Static Code Analysis with Semgrep",
+                        "slug": "sast-semgrep",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 18,
+                        "content": "Writing custom SAST rules for security anti-patterns.",
+                    }
+                ],
+            },
+            {
+                "module_number": "05",
+                "title": "Dependency Security",
+                "description": "Software composition analysis (SCA).",
+                "lessons": [
+                    {
+                        "title": "SCA & Automated Dependabot Remediation",
+                        "slug": "dependency-sca",
+                        "lesson_type": "theory",
+                        "estimated_minutes": 14,
+                        "content": "Patching transitive vulnerabilities.",
+                    }
+                ],
+            },
+            {
+                "module_number": "06",
+                "title": "Container Security",
+                "description": "Rootless containers, distroless images.",
+                "lessons": [
+                    {
+                        "title": "Distroless & Non-Root Containerization",
+                        "slug": "distroless-containers",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 18,
+                        "content": "Reducing attack surface to bare binaries.",
+                    }
+                ],
+            },
+            {
+                "module_number": "07",
+                "title": "Image Scanning",
+                "description": "Trivy, Clair, and vulnerability databases.",
+                "lessons": [
+                    {
+                        "title": "Automated Trivy Vulnerability Gates",
+                        "slug": "trivy-scanning",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 16,
+                        "content": "Failing CI builds on CVSS > 7.0.",
+                    }
+                ],
+            },
+            {
+                "module_number": "08",
+                "title": "SBOM",
+                "description": "Software Bill of Materials standards.",
+                "lessons": [
+                    {
+                        "title": "Generating SBOMs with Syft & Grype",
+                        "slug": "sbom-generation",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 15,
+                        "content": "CycloneDX formatting for supply chain audits.",
+                    }
+                ],
+            },
+            {
+                "module_number": "09",
+                "title": "Security Gates",
+                "description": "Automated policy gates in GitHub Actions.",
+                "lessons": [
+                    {
+                        "title": "Building Branch Protection Security Gates",
+                        "slug": "branch-security-gates",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 15,
+                        "content": "Integrating security test results into pull requests.",
+                    }
+                ],
+            },
+            {
+                "module_number": "10",
+                "title": "Kubernetes Security",
+                "description": "Kyverno, OPA Gatekeeper, admission control.",
+                "lessons": [
+                    {
+                        "title": "Enforcing Pod Security Standards with Kyverno",
+                        "slug": "kyverno-pss",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 22,
+                        "content": "Restricted Pod Security Standard policies.",
+                    }
+                ],
+            },
+            {
+                "module_number": "11",
+                "title": "Security Monitoring",
+                "description": "Falco runtime threat detection.",
+                "lessons": [
+                    {
+                        "title": "Runtime Kernel Threat Detection with Falco",
+                        "slug": "falco-runtime",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 20,
+                        "content": "Detecting privilege escalation and unauthorized shell spawns.",
+                    }
+                ],
+            },
+        ],
     },
     {
         "slug": "infrastructure-as-code-with-terraform",
@@ -223,7 +843,15 @@ COURSES_DATA: List[Dict[str, Any]] = [
         "thumbnail_url": "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&auto=format&fit=crop&q=80",
         "description": "Master HashiCorp Terraform from syntax fundamentals to reusable modules, remote state locking, Terragrunt, and multi-cloud provisioning.",
         "long_description": "Write clean, modular, production-ready HashiCorp Configuration Language (HCL). Learn how Terraform constructs dependency graphs, manages remote state in S3 with DynamoDB locking, handles drift, and integrates with CI/CD runners.",
-        "technologies": ["Terraform", "HCL", "AWS", "Terragrunt", "tflint", "S3", "DynamoDB"],
+        "technologies": [
+            "Terraform",
+            "HCL",
+            "AWS",
+            "Terragrunt",
+            "tflint",
+            "S3",
+            "DynamoDB",
+        ],
         "learning_outcomes": [
             "Write modular HCL code utilizing variables, outputs, and local values",
             "Manage remote backend state with S3 bucket encryption and DynamoDB locking",
@@ -235,19 +863,175 @@ COURSES_DATA: List[Dict[str, Any]] = [
         "instructor_role": "Principal DevOps Architect & HashiCorp Ambassador",
         "instructor_avatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80",
         "modules": [
-            {"module_number": "01", "title": "IaC Fundamentals", "description": "Declarative syntax, state files, providers.", "lessons": [{"title": "Terraform Core Architecture & State Model", "slug": "terraform-core", "lesson_type": "theory", "estimated_minutes": 15, "content": "Understanding the state file as the ledger of real-world infrastructure."}]},
-            {"module_number": "02", "title": "Terraform Installation", "description": "CLI setup, tfswitch, tenv.", "lessons": [{"title": "Managing Terraform Versions with tenv", "slug": "tenv-setup", "lesson_type": "hands-on", "estimated_minutes": 10, "content": "Switching between Terraform and OpenTofu."}]},
-            {"module_number": "03", "title": "Providers", "description": "Configuring AWS, Azure, and Google Cloud providers.", "lessons": [{"title": "Provider Authentication & AssumeRole", "slug": "provider-assumerole", "lesson_type": "hands-on", "estimated_minutes": 15, "content": "Configuring multi-account AWS provider credentials."}]},
-            {"module_number": "04", "title": "Resources", "description": "Resource blocks, dependencies, lifecycle rules.", "lessons": [{"title": "Lifecycle Meta-Arguments: prevent_destroy & create_before_destroy", "slug": "resource-lifecycles", "lesson_type": "hands-on", "estimated_minutes": 18, "content": "Protecting critical production databases."}]},
-            {"module_number": "05", "title": "Variables", "description": "Input validation, type constraints, variable precedence.", "lessons": [{"title": "Custom Variable Validation Rules", "slug": "variable-validation", "lesson_type": "hands-on", "estimated_minutes": 14, "content": "Enforcing naming conventions with regex validators."}]},
-            {"module_number": "06", "title": "Outputs", "description": "Sensitive outputs, querying module outputs.", "lessons": [{"title": "Exporting Sensitive Connection Strings", "slug": "sensitive-outputs", "lesson_type": "theory", "estimated_minutes": 12, "content": "Preventing password leakage in CLI logs."}]},
-            {"module_number": "07", "title": "State", "description": "State manipulation, terraform state mv, rm.", "lessons": [{"title": "Refactoring Code with moved Blocks & state mv", "slug": "refactoring-state", "lesson_type": "hands-on", "estimated_minutes": 20, "content": "Refactoring without destroying live resources."}]},
-            {"module_number": "08", "title": "Modules", "description": "Authoring published and local modules.", "lessons": [{"title": "Building a Production-Grade VPC Module", "slug": "building-vpc-module", "lesson_type": "hands-on", "estimated_minutes": 25, "content": "Dynamic subnets with cidrsubnet functions."}]},
-            {"module_number": "09", "title": "Remote State", "description": "S3 backend, DynamoDB state locking.", "lessons": [{"title": "Locking Remote State with DynamoDB", "slug": "s3-dynamodb-backend", "lesson_type": "hands-on", "estimated_minutes": 18, "content": "Preventing concurrent write corruption."}]},
-            {"module_number": "10", "title": "AWS Infrastructure", "description": "Deploying ECS, ALB, and RDS clusters.", "lessons": [{"title": "Provisioning Multi-AZ ECS Fargate Clusters", "slug": "ecs-fargate-terraform", "lesson_type": "hands-on", "estimated_minutes": 30, "content": "Full stack application deployment."}]},
-            {"module_number": "11", "title": "Terraform CI/CD", "description": "Atlantis, GitHub Actions, Terraform Cloud.", "lessons": [{"title": "Pull-Request Plan Automation with Atlantis", "slug": "atlantis-automation", "lesson_type": "hands-on", "estimated_minutes": 20, "content": "Running terraform plan on PR comments."}]},
-            {"module_number": "12", "title": "Infrastructure Troubleshooting", "description": "Debugging cycle errors and drift.", "lessons": [{"title": "Resolving Dependency Cycle Deadlocks", "slug": "dependency-cycles", "lesson_type": "hands-on", "estimated_minutes": 18, "content": "Decoupling circular dependencies."}]}
-        ]
+            {
+                "module_number": "01",
+                "title": "IaC Fundamentals",
+                "description": "Declarative syntax, state files, providers.",
+                "lessons": [
+                    {
+                        "title": "Terraform Core Architecture & State Model",
+                        "slug": "terraform-core",
+                        "lesson_type": "theory",
+                        "estimated_minutes": 15,
+                        "content": "Understanding the state file as the ledger of real-world infrastructure.",
+                    }
+                ],
+            },
+            {
+                "module_number": "02",
+                "title": "Terraform Installation",
+                "description": "CLI setup, tfswitch, tenv.",
+                "lessons": [
+                    {
+                        "title": "Managing Terraform Versions with tenv",
+                        "slug": "tenv-setup",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 10,
+                        "content": "Switching between Terraform and OpenTofu.",
+                    }
+                ],
+            },
+            {
+                "module_number": "03",
+                "title": "Providers",
+                "description": "Configuring AWS, Azure, and Google Cloud providers.",
+                "lessons": [
+                    {
+                        "title": "Provider Authentication & AssumeRole",
+                        "slug": "provider-assumerole",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 15,
+                        "content": "Configuring multi-account AWS provider credentials.",
+                    }
+                ],
+            },
+            {
+                "module_number": "04",
+                "title": "Resources",
+                "description": "Resource blocks, dependencies, lifecycle rules.",
+                "lessons": [
+                    {
+                        "title": "Lifecycle Meta-Arguments: prevent_destroy & create_before_destroy",
+                        "slug": "resource-lifecycles",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 18,
+                        "content": "Protecting critical production databases.",
+                    }
+                ],
+            },
+            {
+                "module_number": "05",
+                "title": "Variables",
+                "description": "Input validation, type constraints, variable precedence.",
+                "lessons": [
+                    {
+                        "title": "Custom Variable Validation Rules",
+                        "slug": "variable-validation",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 14,
+                        "content": "Enforcing naming conventions with regex validators.",
+                    }
+                ],
+            },
+            {
+                "module_number": "06",
+                "title": "Outputs",
+                "description": "Sensitive outputs, querying module outputs.",
+                "lessons": [
+                    {
+                        "title": "Exporting Sensitive Connection Strings",
+                        "slug": "sensitive-outputs",
+                        "lesson_type": "theory",
+                        "estimated_minutes": 12,
+                        "content": "Preventing password leakage in CLI logs.",
+                    }
+                ],
+            },
+            {
+                "module_number": "07",
+                "title": "State",
+                "description": "State manipulation, terraform state mv, rm.",
+                "lessons": [
+                    {
+                        "title": "Refactoring Code with moved Blocks & state mv",
+                        "slug": "refactoring-state",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 20,
+                        "content": "Refactoring without destroying live resources.",
+                    }
+                ],
+            },
+            {
+                "module_number": "08",
+                "title": "Modules",
+                "description": "Authoring published and local modules.",
+                "lessons": [
+                    {
+                        "title": "Building a Production-Grade VPC Module",
+                        "slug": "building-vpc-module",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 25,
+                        "content": "Dynamic subnets with cidrsubnet functions.",
+                    }
+                ],
+            },
+            {
+                "module_number": "09",
+                "title": "Remote State",
+                "description": "S3 backend, DynamoDB state locking.",
+                "lessons": [
+                    {
+                        "title": "Locking Remote State with DynamoDB",
+                        "slug": "s3-dynamodb-backend",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 18,
+                        "content": "Preventing concurrent write corruption.",
+                    }
+                ],
+            },
+            {
+                "module_number": "10",
+                "title": "AWS Infrastructure",
+                "description": "Deploying ECS, ALB, and RDS clusters.",
+                "lessons": [
+                    {
+                        "title": "Provisioning Multi-AZ ECS Fargate Clusters",
+                        "slug": "ecs-fargate-terraform",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 30,
+                        "content": "Full stack application deployment.",
+                    }
+                ],
+            },
+            {
+                "module_number": "11",
+                "title": "Terraform CI/CD",
+                "description": "Atlantis, GitHub Actions, Terraform Cloud.",
+                "lessons": [
+                    {
+                        "title": "Pull-Request Plan Automation with Atlantis",
+                        "slug": "atlantis-automation",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 20,
+                        "content": "Running terraform plan on PR comments.",
+                    }
+                ],
+            },
+            {
+                "module_number": "12",
+                "title": "Infrastructure Troubleshooting",
+                "description": "Debugging cycle errors and drift.",
+                "lessons": [
+                    {
+                        "title": "Resolving Dependency Cycle Deadlocks",
+                        "slug": "dependency-cycles",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 18,
+                        "content": "Decoupling circular dependencies.",
+                    }
+                ],
+            },
+        ],
     },
     {
         "slug": "gitops-with-argo-cd",
@@ -258,7 +1042,14 @@ COURSES_DATA: List[Dict[str, Any]] = [
         "thumbnail_url": "https://images.unsplash.com/photo-1556075798-4825dfaaf498?w=800&auto=format&fit=crop&q=80",
         "description": "Implement declarative Kubernetes deployments using Argo CD. Master ApplicationSets, sync waves, drift reconciliation, and progressive rollouts.",
         "long_description": "Git is your single source of truth for infrastructure and applications. Learn how Argo CD reconciles live cluster state with Git repositories, automates multi-environment deployments via ApplicationSets, and executes progressive canary releases.",
-        "technologies": ["Argo CD", "GitOps", "Kubernetes", "Kustomize", "Helm", "Argo Rollouts"],
+        "technologies": [
+            "Argo CD",
+            "GitOps",
+            "Kubernetes",
+            "Kustomize",
+            "Helm",
+            "Argo Rollouts",
+        ],
         "learning_outcomes": [
             "Deconstruct the GitOps operating model and reconciliation architecture",
             "Install, secure, and configure Argo CD with SSO and RBAC",
@@ -270,17 +1061,147 @@ COURSES_DATA: List[Dict[str, Any]] = [
         "instructor_role": "Principal SRE, GitOps Working Group",
         "instructor_avatar": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80",
         "modules": [
-            {"module_number": "01", "title": "GitOps Fundamentals", "description": "Core GitOps principles.", "lessons": [{"title": "The Four Principles of OpenGitOps", "slug": "opengitops-principles", "lesson_type": "theory", "estimated_minutes": 12, "content": "Declarative, versioned, pulled automatically, continuously reconciled."}]},
-            {"module_number": "02", "title": "Desired State", "description": "Kustomize overlays and environment structuring.", "lessons": [{"title": "Structuring Base & Overlays with Kustomize", "slug": "kustomize-overlays", "lesson_type": "hands-on", "estimated_minutes": 16, "content": "DRY multi-cluster manifest repositories."}]},
-            {"module_number": "03", "title": "Argo CD", "description": "Architecture, reposerver, dex SSO.", "lessons": [{"title": "Argo CD Controller Internals", "slug": "argocd-internals", "lesson_type": "theory", "estimated_minutes": 15, "content": "How the repo-server and application controller interact."}]},
-            {"module_number": "04", "title": "Applications", "description": "Application CRD, project isolation.", "lessons": [{"title": "Writing Declarative Argo CD Application CRDs", "slug": "application-crds", "lesson_type": "hands-on", "estimated_minutes": 18, "content": "Targeting remote clusters and namespaces."}]},
-            {"module_number": "05", "title": "Sync", "description": "Automated sync policies, self-heal, prune.", "lessons": [{"title": "Configuring Self-Healing & Automated Prune", "slug": "sync-policies", "lesson_type": "hands-on", "estimated_minutes": 15, "content": "Preventing manual cluster modifications from sticking."}]},
-            {"module_number": "06", "title": "Health", "description": "Custom resource health assessment with Lua.", "lessons": [{"title": "Authoring Custom Lua Health Checks", "slug": "lua-health-checks", "lesson_type": "hands-on", "estimated_minutes": 18, "content": "Reporting health status for proprietary CRDs."}]},
-            {"module_number": "07", "title": "Drift Detection", "description": "Monitoring and alerting on configuration drift.", "lessons": [{"title": "Automated Slack Alerts on Cluster Drift", "slug": "drift-alerting", "lesson_type": "hands-on", "estimated_minutes": 15, "content": "Argo CD notifications controller configuration."}]},
-            {"module_number": "08", "title": "Rollbacks", "description": "Instant rollbacks and disaster recovery.", "lessons": [{"title": "Git-Driven Rollbacks vs Argo CD History", "slug": "gitops-rollbacks", "lesson_type": "theory", "estimated_minutes": 14, "content": "Why git revert is always preferred over manual UI rollback."}]},
-            {"module_number": "09", "title": "Multi-environment GitOps", "description": "ApplicationSets for multi-cluster scaling.", "lessons": [{"title": "Scaling Hundreds of Clusters with ApplicationSets", "slug": "applicationsets", "lesson_type": "hands-on", "estimated_minutes": 25, "content": "Matrix generators and cluster list generators."}]},
-            {"module_number": "10", "title": "Production Patterns", "description": "Sync waves and database migration hooks.", "lessons": [{"title": "Sequencing DB Migrations with Sync Waves", "slug": "sync-waves", "lesson_type": "hands-on", "estimated_minutes": 20, "content": "Running pre-sync Kubernetes jobs before rolling deployments."}]}
-        ]
+            {
+                "module_number": "01",
+                "title": "GitOps Fundamentals",
+                "description": "Core GitOps principles.",
+                "lessons": [
+                    {
+                        "title": "The Four Principles of OpenGitOps",
+                        "slug": "opengitops-principles",
+                        "lesson_type": "theory",
+                        "estimated_minutes": 12,
+                        "content": "Declarative, versioned, pulled automatically, continuously reconciled.",
+                    }
+                ],
+            },
+            {
+                "module_number": "02",
+                "title": "Desired State",
+                "description": "Kustomize overlays and environment structuring.",
+                "lessons": [
+                    {
+                        "title": "Structuring Base & Overlays with Kustomize",
+                        "slug": "kustomize-overlays",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 16,
+                        "content": "DRY multi-cluster manifest repositories.",
+                    }
+                ],
+            },
+            {
+                "module_number": "03",
+                "title": "Argo CD",
+                "description": "Architecture, reposerver, dex SSO.",
+                "lessons": [
+                    {
+                        "title": "Argo CD Controller Internals",
+                        "slug": "argocd-internals",
+                        "lesson_type": "theory",
+                        "estimated_minutes": 15,
+                        "content": "How the repo-server and application controller interact.",
+                    }
+                ],
+            },
+            {
+                "module_number": "04",
+                "title": "Applications",
+                "description": "Application CRD, project isolation.",
+                "lessons": [
+                    {
+                        "title": "Writing Declarative Argo CD Application CRDs",
+                        "slug": "application-crds",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 18,
+                        "content": "Targeting remote clusters and namespaces.",
+                    }
+                ],
+            },
+            {
+                "module_number": "05",
+                "title": "Sync",
+                "description": "Automated sync policies, self-heal, prune.",
+                "lessons": [
+                    {
+                        "title": "Configuring Self-Healing & Automated Prune",
+                        "slug": "sync-policies",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 15,
+                        "content": "Preventing manual cluster modifications from sticking.",
+                    }
+                ],
+            },
+            {
+                "module_number": "06",
+                "title": "Health",
+                "description": "Custom resource health assessment with Lua.",
+                "lessons": [
+                    {
+                        "title": "Authoring Custom Lua Health Checks",
+                        "slug": "lua-health-checks",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 18,
+                        "content": "Reporting health status for proprietary CRDs.",
+                    }
+                ],
+            },
+            {
+                "module_number": "07",
+                "title": "Drift Detection",
+                "description": "Monitoring and alerting on configuration drift.",
+                "lessons": [
+                    {
+                        "title": "Automated Slack Alerts on Cluster Drift",
+                        "slug": "drift-alerting",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 15,
+                        "content": "Argo CD notifications controller configuration.",
+                    }
+                ],
+            },
+            {
+                "module_number": "08",
+                "title": "Rollbacks",
+                "description": "Instant rollbacks and disaster recovery.",
+                "lessons": [
+                    {
+                        "title": "Git-Driven Rollbacks vs Argo CD History",
+                        "slug": "gitops-rollbacks",
+                        "lesson_type": "theory",
+                        "estimated_minutes": 14,
+                        "content": "Why git revert is always preferred over manual UI rollback.",
+                    }
+                ],
+            },
+            {
+                "module_number": "09",
+                "title": "Multi-environment GitOps",
+                "description": "ApplicationSets for multi-cluster scaling.",
+                "lessons": [
+                    {
+                        "title": "Scaling Hundreds of Clusters with ApplicationSets",
+                        "slug": "applicationsets",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 25,
+                        "content": "Matrix generators and cluster list generators.",
+                    }
+                ],
+            },
+            {
+                "module_number": "10",
+                "title": "Production Patterns",
+                "description": "Sync waves and database migration hooks.",
+                "lessons": [
+                    {
+                        "title": "Sequencing DB Migrations with Sync Waves",
+                        "slug": "sync-waves",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 20,
+                        "content": "Running pre-sync Kubernetes jobs before rolling deployments.",
+                    }
+                ],
+            },
+        ],
     },
     {
         "slug": "observability-engineering",
@@ -291,7 +1212,15 @@ COURSES_DATA: List[Dict[str, Any]] = [
         "thumbnail_url": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&auto=format&fit=crop&q=80",
         "description": "Master metrics, structured logs, and distributed traces. Build enterprise observability with Prometheus, Grafana, Loki, Tempo, and OpenTelemetry.",
         "long_description": "Transform unreadable logs into actionable insights. Learn how to instrument microservices with OpenTelemetry, collect high-cardinality Prometheus metrics, query Loki logs with LogQL, trace requests with Tempo, and define business SLOs.",
-        "technologies": ["Prometheus", "Grafana", "OpenTelemetry", "Loki", "Tempo", "PromQL", "LogQL"],
+        "technologies": [
+            "Prometheus",
+            "Grafana",
+            "OpenTelemetry",
+            "Loki",
+            "Tempo",
+            "PromQL",
+            "LogQL",
+        ],
         "learning_outcomes": [
             "Deconstruct the three pillars: Metrics, Structured Logs, and Distributed Tracing",
             "Write advanced PromQL queries and alert rules for error budgets",
@@ -303,19 +1232,175 @@ COURSES_DATA: List[Dict[str, Any]] = [
         "instructor_role": "Principal Observability Engineer, ex-Grafana",
         "instructor_avatar": "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=150&auto=format&fit=crop&q=80",
         "modules": [
-            {"module_number": "01", "title": "Observability Fundamentals", "description": "Why monitoring is not observability.", "lessons": [{"title": "The Three Pillars & High Cardinality", "slug": "three-pillars", "lesson_type": "theory", "estimated_minutes": 15, "content": "Understanding why traditional monitoring fails in distributed systems."}]},
-            {"module_number": "02", "title": "Metrics", "description": "Counters, Gauges, Histograms, Summaries.", "lessons": [{"title": "Metric Types & Memory Footprints", "slug": "metric-types", "lesson_type": "theory", "estimated_minutes": 14, "content": "Why histograms are essential for p99 latency measurement."}]},
-            {"module_number": "03", "title": "Logs", "description": "Structured logging, correlation IDs, JSON formatting.", "lessons": [{"title": "Injecting Trace IDs into JSON Logs", "slug": "log-trace-correlation", "lesson_type": "hands-on", "estimated_minutes": 16, "content": "Enabling 1-click jump from log lines to distributed trace spans."}]},
-            {"module_number": "04", "title": "Traces", "description": "Spans, context propagation, baggage.", "lessons": [{"title": "W3C TraceContext & Context Propagation", "slug": "w3c-tracecontext", "lesson_type": "theory", "estimated_minutes": 15, "content": "Passing traceparent headers across HTTP and gRPC boundaries."}]},
-            {"module_number": "05", "title": "Prometheus", "description": "PromQL, rate, histogram_quantile, recording rules.", "lessons": [{"title": "Mastering PromQL: rate vs irate & histogram_quantile", "slug": "promql-deepdive", "lesson_type": "hands-on", "estimated_minutes": 22, "content": "Computing reliable 5-minute request rates."}]},
-            {"module_number": "06", "title": "Grafana", "description": "Dashboards, panels, dynamic variables, alerting.", "lessons": [{"title": "Building Executive & Engineering Grafana Dashboards", "slug": "grafana-dashboards", "lesson_type": "hands-on", "estimated_minutes": 25, "content": "Template variables and threshold overrides."}]},
-            {"module_number": "07", "title": "Loki", "description": "LogQL, label indexing, chunk storage.", "lessons": [{"title": "LogQL Queries & Metric Generation from Logs", "slug": "logql-queries", "lesson_type": "hands-on", "estimated_minutes": 18, "content": "Counting 500 errors dynamically without Prometheus."}]},
-            {"module_number": "08", "title": "Tempo", "description": "Object storage tracing at petabyte scale.", "lessons": [{"title": "Distributed Tracing Storage with Grafana Tempo", "slug": "tempo-storage", "lesson_type": "theory", "estimated_minutes": 15, "content": "Storing traces in S3 with zero indexing costs."}]},
-            {"module_number": "09", "title": "OpenTelemetry", "description": "OTel Collector, processors, exporters.", "lessons": [{"title": "Deploying the OpenTelemetry Collector DaemonSet", "slug": "otel-collector", "lesson_type": "hands-on", "estimated_minutes": 24, "content": "Filtering PII data in collector batch processors."}]},
-            {"module_number": "10", "title": "Alerting", "description": "Prometheus Alertmanager, inhibition, routing.", "lessons": [{"title": "Multi-Tier Alertmanager Routing & Deduplication", "slug": "alertmanager-routing", "lesson_type": "hands-on", "estimated_minutes": 18, "content": "Routing high-severity pages to PagerDuty."}]},
-            {"module_number": "11", "title": "SLOs", "description": "SLIs, SLOs, Error Budgets, and Burn Rates.", "lessons": [{"title": "Calculating Multi-Window Multi-Burn-Rate Alerts", "slug": "slo-burn-rates", "lesson_type": "theory", "estimated_minutes": 20, "content": "Alerting based on 14-day error budget depletion rate."}]},
-            {"module_number": "12", "title": "Incident Response", "description": "On-call triage and war room navigation.", "lessons": [{"title": "Triaging Live Latency Spikes with Telemetry", "slug": "triage-latency", "lesson_type": "hands-on", "estimated_minutes": 25, "content": "Identifying downstream database locks using trace flamegraphs."}]}
-        ]
+            {
+                "module_number": "01",
+                "title": "Observability Fundamentals",
+                "description": "Why monitoring is not observability.",
+                "lessons": [
+                    {
+                        "title": "The Three Pillars & High Cardinality",
+                        "slug": "three-pillars",
+                        "lesson_type": "theory",
+                        "estimated_minutes": 15,
+                        "content": "Understanding why traditional monitoring fails in distributed systems.",
+                    }
+                ],
+            },
+            {
+                "module_number": "02",
+                "title": "Metrics",
+                "description": "Counters, Gauges, Histograms, Summaries.",
+                "lessons": [
+                    {
+                        "title": "Metric Types & Memory Footprints",
+                        "slug": "metric-types",
+                        "lesson_type": "theory",
+                        "estimated_minutes": 14,
+                        "content": "Why histograms are essential for p99 latency measurement.",
+                    }
+                ],
+            },
+            {
+                "module_number": "03",
+                "title": "Logs",
+                "description": "Structured logging, correlation IDs, JSON formatting.",
+                "lessons": [
+                    {
+                        "title": "Injecting Trace IDs into JSON Logs",
+                        "slug": "log-trace-correlation",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 16,
+                        "content": "Enabling 1-click jump from log lines to distributed trace spans.",
+                    }
+                ],
+            },
+            {
+                "module_number": "04",
+                "title": "Traces",
+                "description": "Spans, context propagation, baggage.",
+                "lessons": [
+                    {
+                        "title": "W3C TraceContext & Context Propagation",
+                        "slug": "w3c-tracecontext",
+                        "lesson_type": "theory",
+                        "estimated_minutes": 15,
+                        "content": "Passing traceparent headers across HTTP and gRPC boundaries.",
+                    }
+                ],
+            },
+            {
+                "module_number": "05",
+                "title": "Prometheus",
+                "description": "PromQL, rate, histogram_quantile, recording rules.",
+                "lessons": [
+                    {
+                        "title": "Mastering PromQL: rate vs irate & histogram_quantile",
+                        "slug": "promql-deepdive",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 22,
+                        "content": "Computing reliable 5-minute request rates.",
+                    }
+                ],
+            },
+            {
+                "module_number": "06",
+                "title": "Grafana",
+                "description": "Dashboards, panels, dynamic variables, alerting.",
+                "lessons": [
+                    {
+                        "title": "Building Executive & Engineering Grafana Dashboards",
+                        "slug": "grafana-dashboards",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 25,
+                        "content": "Template variables and threshold overrides.",
+                    }
+                ],
+            },
+            {
+                "module_number": "07",
+                "title": "Loki",
+                "description": "LogQL, label indexing, chunk storage.",
+                "lessons": [
+                    {
+                        "title": "LogQL Queries & Metric Generation from Logs",
+                        "slug": "logql-queries",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 18,
+                        "content": "Counting 500 errors dynamically without Prometheus.",
+                    }
+                ],
+            },
+            {
+                "module_number": "08",
+                "title": "Tempo",
+                "description": "Object storage tracing at petabyte scale.",
+                "lessons": [
+                    {
+                        "title": "Distributed Tracing Storage with Grafana Tempo",
+                        "slug": "tempo-storage",
+                        "lesson_type": "theory",
+                        "estimated_minutes": 15,
+                        "content": "Storing traces in S3 with zero indexing costs.",
+                    }
+                ],
+            },
+            {
+                "module_number": "09",
+                "title": "OpenTelemetry",
+                "description": "OTel Collector, processors, exporters.",
+                "lessons": [
+                    {
+                        "title": "Deploying the OpenTelemetry Collector DaemonSet",
+                        "slug": "otel-collector",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 24,
+                        "content": "Filtering PII data in collector batch processors.",
+                    }
+                ],
+            },
+            {
+                "module_number": "10",
+                "title": "Alerting",
+                "description": "Prometheus Alertmanager, inhibition, routing.",
+                "lessons": [
+                    {
+                        "title": "Multi-Tier Alertmanager Routing & Deduplication",
+                        "slug": "alertmanager-routing",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 18,
+                        "content": "Routing high-severity pages to PagerDuty.",
+                    }
+                ],
+            },
+            {
+                "module_number": "11",
+                "title": "SLOs",
+                "description": "SLIs, SLOs, Error Budgets, and Burn Rates.",
+                "lessons": [
+                    {
+                        "title": "Calculating Multi-Window Multi-Burn-Rate Alerts",
+                        "slug": "slo-burn-rates",
+                        "lesson_type": "theory",
+                        "estimated_minutes": 20,
+                        "content": "Alerting based on 14-day error budget depletion rate.",
+                    }
+                ],
+            },
+            {
+                "module_number": "12",
+                "title": "Incident Response",
+                "description": "On-call triage and war room navigation.",
+                "lessons": [
+                    {
+                        "title": "Triaging Live Latency Spikes with Telemetry",
+                        "slug": "triage-latency",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 25,
+                        "content": "Identifying downstream database locks using trace flamegraphs.",
+                    }
+                ],
+            },
+        ],
     },
     {
         "slug": "ai-for-cloud-devops",
@@ -326,7 +1411,15 @@ COURSES_DATA: List[Dict[str, Any]] = [
         "thumbnail_url": "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&auto=format&fit=crop&q=80",
         "description": "Supercharge engineering workflows with LLMs. Build AI root cause diagnostic engines, automated remediation agents, and DevOps copilots.",
         "long_description": "Integrate Large Language Models directly into your cloud operations. Learn prompt engineering for code synthesis, Retrieval Augmented Generation (RAG) on engineering runbooks, autonomous debugging agents, and AI-assisted CI/CD failure analysis.",
-        "technologies": ["Python", "FastAPI", "OpenAI", "LangChain", "Vector DBs", "RAG", "Kubernetes"],
+        "technologies": [
+            "Python",
+            "FastAPI",
+            "OpenAI",
+            "LangChain",
+            "Vector DBs",
+            "RAG",
+            "Kubernetes",
+        ],
         "learning_outcomes": [
             "Deconstruct LLM inference mechanics, token budgets, and embeddings",
             "Build Retrieval-Augmented Generation (RAG) pipelines over runbooks and architecture RFCs",
@@ -338,19 +1431,175 @@ COURSES_DATA: List[Dict[str, Any]] = [
         "instructor_role": "Lead AI Systems Engineer, CloudForge",
         "instructor_avatar": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80",
         "modules": [
-            {"module_number": "01", "title": "AI for Engineering", "description": "Landscape of AI in SRE and DevOps.", "lessons": [{"title": "How Generative AI Augments Cloud Operations", "slug": "genai-operations", "lesson_type": "theory", "estimated_minutes": 15, "content": "Moving from reactive alerts to contextual synthesis."}]},
-            {"module_number": "02", "title": "LLM Fundamentals", "description": "Tokens, temperature, context windows.", "lessons": [{"title": "Understanding Tokenization & Context Windows", "slug": "tokenization-context", "lesson_type": "theory", "estimated_minutes": 14, "content": "Managing context boundaries when feeding logs into LLMs."}]},
-            {"module_number": "03", "title": "Prompt Engineering", "description": "Few-shot prompting, structured outputs.", "lessons": [{"title": "Structured JSON Extraction with System Prompts", "slug": "structured-prompts", "lesson_type": "hands-on", "estimated_minutes": 18, "content": "Forcing LLMs to return strict Pydantic schemas."}]},
-            {"module_number": "04", "title": "RAG", "description": "Vector databases, chunking, embeddings.", "lessons": [{"title": "Building a Runbook Vector Search with pgvector", "slug": "pgvector-rag", "lesson_type": "hands-on", "estimated_minutes": 22, "content": "Retrieving relevant incident runbooks using cosine similarity."}]},
-            {"module_number": "05", "title": "AI-assisted CI/CD", "description": "Automated build failure triage.", "lessons": [{"title": "Automated CI/CD Log Parsing & Diff Synthesis", "slug": "cicd-log-synthesis", "lesson_type": "hands-on", "estimated_minutes": 20, "content": "Parsing compiler traces and proposing git diff fixes."}]},
-            {"module_number": "06", "title": "AI Log Analysis", "description": "Semantic log grouping and anomaly detection.", "lessons": [{"title": "Clustering High-Volume Error Logs Semantically", "slug": "log-clustering", "lesson_type": "hands-on", "estimated_minutes": 18, "content": "Reducing 50,000 error lines to 3 root-cause clusters."}]},
-            {"module_number": "07", "title": "AI Incident Investigation", "description": "Cross-telemetry synthesis.", "lessons": [{"title": "Correlating Metrics, Logs, and Traces with AI", "slug": "cross-telemetry-ai", "lesson_type": "hands-on", "estimated_minutes": 25, "content": "Synthesizing full Root Cause Analysis reports in 30 seconds."}]},
-            {"module_number": "08", "title": "AI Documentation", "description": "Generating architecture docs and diagrams.", "lessons": [{"title": "Auto-Generating Architecture RFCs from Terraform Code", "slug": "auto-rfcs", "lesson_type": "hands-on", "estimated_minutes": 16, "content": "Extracting resources and outputting Mermaid diagrams."}]},
-            {"module_number": "09", "title": "AI Agents", "description": "Tool use, ReAct frameworks, LangGraph.", "lessons": [{"title": "Building a Kubernetes Diagnostic Agent with Tool Calling", "slug": "k8s-agent-tool-calling", "lesson_type": "hands-on", "estimated_minutes": 26, "content": "Giving the LLM read-only kubectl access."}]},
-            {"module_number": "10", "title": "Human-in-the-loop Automation", "description": "Safety boundaries and approval workflows.", "lessons": [{"title": "Designing Safe Approval Gates for AI Remediations", "slug": "approval-gates", "lesson_type": "theory", "estimated_minutes": 15, "content": "Ensuring no destructive changes occur without human signoff."}]},
-            {"module_number": "11", "title": "AI Security", "description": "Prompt injection, data privacy, guardrails.", "lessons": [{"title": "Defending Against Indirect Prompt Injection in Logs", "slug": "prompt-injection-defense", "lesson_type": "theory", "estimated_minutes": 18, "content": "Sanitizing untrusted log input before LLM ingestion."}]},
-            {"module_number": "12", "title": "Building DevOps Copilots", "description": "End-to-end full stack copilot project.", "lessons": [{"title": "Assembling the CloudForge Floating Copilot", "slug": "cloudforge-copilot", "lesson_type": "hands-on", "estimated_minutes": 30, "content": "Connecting frontend chat UI to streaming FastAPI endpoints."}]}
-        ]
+            {
+                "module_number": "01",
+                "title": "AI for Engineering",
+                "description": "Landscape of AI in SRE and DevOps.",
+                "lessons": [
+                    {
+                        "title": "How Generative AI Augments Cloud Operations",
+                        "slug": "genai-operations",
+                        "lesson_type": "theory",
+                        "estimated_minutes": 15,
+                        "content": "Moving from reactive alerts to contextual synthesis.",
+                    }
+                ],
+            },
+            {
+                "module_number": "02",
+                "title": "LLM Fundamentals",
+                "description": "Tokens, temperature, context windows.",
+                "lessons": [
+                    {
+                        "title": "Understanding Tokenization & Context Windows",
+                        "slug": "tokenization-context",
+                        "lesson_type": "theory",
+                        "estimated_minutes": 14,
+                        "content": "Managing context boundaries when feeding logs into LLMs.",
+                    }
+                ],
+            },
+            {
+                "module_number": "03",
+                "title": "Prompt Engineering",
+                "description": "Few-shot prompting, structured outputs.",
+                "lessons": [
+                    {
+                        "title": "Structured JSON Extraction with System Prompts",
+                        "slug": "structured-prompts",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 18,
+                        "content": "Forcing LLMs to return strict Pydantic schemas.",
+                    }
+                ],
+            },
+            {
+                "module_number": "04",
+                "title": "RAG",
+                "description": "Vector databases, chunking, embeddings.",
+                "lessons": [
+                    {
+                        "title": "Building a Runbook Vector Search with pgvector",
+                        "slug": "pgvector-rag",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 22,
+                        "content": "Retrieving relevant incident runbooks using cosine similarity.",
+                    }
+                ],
+            },
+            {
+                "module_number": "05",
+                "title": "AI-assisted CI/CD",
+                "description": "Automated build failure triage.",
+                "lessons": [
+                    {
+                        "title": "Automated CI/CD Log Parsing & Diff Synthesis",
+                        "slug": "cicd-log-synthesis",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 20,
+                        "content": "Parsing compiler traces and proposing git diff fixes.",
+                    }
+                ],
+            },
+            {
+                "module_number": "06",
+                "title": "AI Log Analysis",
+                "description": "Semantic log grouping and anomaly detection.",
+                "lessons": [
+                    {
+                        "title": "Clustering High-Volume Error Logs Semantically",
+                        "slug": "log-clustering",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 18,
+                        "content": "Reducing 50,000 error lines to 3 root-cause clusters.",
+                    }
+                ],
+            },
+            {
+                "module_number": "07",
+                "title": "AI Incident Investigation",
+                "description": "Cross-telemetry synthesis.",
+                "lessons": [
+                    {
+                        "title": "Correlating Metrics, Logs, and Traces with AI",
+                        "slug": "cross-telemetry-ai",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 25,
+                        "content": "Synthesizing full Root Cause Analysis reports in 30 seconds.",
+                    }
+                ],
+            },
+            {
+                "module_number": "08",
+                "title": "AI Documentation",
+                "description": "Generating architecture docs and diagrams.",
+                "lessons": [
+                    {
+                        "title": "Auto-Generating Architecture RFCs from Terraform Code",
+                        "slug": "auto-rfcs",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 16,
+                        "content": "Extracting resources and outputting Mermaid diagrams.",
+                    }
+                ],
+            },
+            {
+                "module_number": "09",
+                "title": "AI Agents",
+                "description": "Tool use, ReAct frameworks, LangGraph.",
+                "lessons": [
+                    {
+                        "title": "Building a Kubernetes Diagnostic Agent with Tool Calling",
+                        "slug": "k8s-agent-tool-calling",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 26,
+                        "content": "Giving the LLM read-only kubectl access.",
+                    }
+                ],
+            },
+            {
+                "module_number": "10",
+                "title": "Human-in-the-loop Automation",
+                "description": "Safety boundaries and approval workflows.",
+                "lessons": [
+                    {
+                        "title": "Designing Safe Approval Gates for AI Remediations",
+                        "slug": "approval-gates",
+                        "lesson_type": "theory",
+                        "estimated_minutes": 15,
+                        "content": "Ensuring no destructive changes occur without human signoff.",
+                    }
+                ],
+            },
+            {
+                "module_number": "11",
+                "title": "AI Security",
+                "description": "Prompt injection, data privacy, guardrails.",
+                "lessons": [
+                    {
+                        "title": "Defending Against Indirect Prompt Injection in Logs",
+                        "slug": "prompt-injection-defense",
+                        "lesson_type": "theory",
+                        "estimated_minutes": 18,
+                        "content": "Sanitizing untrusted log input before LLM ingestion.",
+                    }
+                ],
+            },
+            {
+                "module_number": "12",
+                "title": "Building DevOps Copilots",
+                "description": "End-to-end full stack copilot project.",
+                "lessons": [
+                    {
+                        "title": "Assembling the CloudForge Floating Copilot",
+                        "slug": "cloudforge-copilot",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 30,
+                        "content": "Connecting frontend chat UI to streaming FastAPI endpoints.",
+                    }
+                ],
+            },
+        ],
     },
     {
         "slug": "cloud-security-fundamentals",
@@ -361,7 +1610,15 @@ COURSES_DATA: List[Dict[str, Any]] = [
         "thumbnail_url": "https://images.unsplash.com/photo-1510511459019-5dda7724fd87?w=800&auto=format&fit=crop&q=80",
         "description": "Establish a bulletproof security baseline across cloud infrastructure. Master IAM, zero-trust network boundaries, KMS encryption, and audit logging.",
         "long_description": "Security is not an afterthought. Learn how to secure multi-account AWS and cloud topologies according to CIS Benchmarks, implement zero-trust network boundaries, configure envelope encryption with KMS, and monitor CloudTrail audit logs for anomalous activity.",
-        "technologies": ["AWS", "IAM", "KMS", "CloudTrail", "GuardDuty", "Zero Trust", "CIS Benchmarks"],
+        "technologies": [
+            "AWS",
+            "IAM",
+            "KMS",
+            "CloudTrail",
+            "GuardDuty",
+            "Zero Trust",
+            "CIS Benchmarks",
+        ],
         "learning_outcomes": [
             "Implement multi-account AWS Organization security architecture",
             "Design zero-trust network boundaries with security groups and microsegmentation",
@@ -373,28 +1630,145 @@ COURSES_DATA: List[Dict[str, Any]] = [
         "instructor_role": "Staff SRE & Security Architect",
         "instructor_avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
         "modules": [
-            {"module_number": "01", "title": "Security Fundamentals", "description": "CIA triad and threat modeling in the cloud.", "lessons": [{"title": "Cloud Threat Modeling & Attack Vectors", "slug": "cloud-threat-modeling", "lesson_type": "theory", "estimated_minutes": 15, "content": "Identifying external and insider threat actors."}]},
-            {"module_number": "02", "title": "IAM", "description": "Service Control Policies, permissions boundaries.", "lessons": [{"title": "AWS Organizations & Service Control Policies (SCPs)", "slug": "scps-iam", "lesson_type": "hands-on", "estimated_minutes": 18, "content": "Enforcing guardrails that even account root users cannot bypass."}]},
-            {"module_number": "03", "title": "Network Security", "description": "Private subnets, VPC peering, Transit Gateways.", "lessons": [{"title": "Zero-Trust VPC Network Architecture", "slug": "zero-trust-vpc", "lesson_type": "hands-on", "estimated_minutes": 20, "content": "Eliminating public IPs on backend application and database tiers."}]},
-            {"module_number": "04", "title": "Encryption", "description": "KMS, TLS 1.3, client-side encryption.", "lessons": [{"title": "KMS Customer Managed Keys & Key Rotation", "slug": "kms-key-rotation", "lesson_type": "hands-on", "estimated_minutes": 15, "content": "Automating annual cryptographic key rotation."}]},
-            {"module_number": "05", "title": "Secrets", "description": "Secrets Manager and rotation lambdas.", "lessons": [{"title": "Automated Database Password Rotation", "slug": "automated-secret-rotation", "lesson_type": "hands-on", "estimated_minutes": 20, "content": "Using AWS Secrets Manager with RDS rotation Lambdas."}]},
-            {"module_number": "06", "title": "Logging", "description": "CloudTrail, VPC Flow Logs, S3 Access Logs.", "lessons": [{"title": "Enabling Immutable CloudTrail Multi-Region Logs", "slug": "immutable-cloudtrail", "lesson_type": "hands-on", "estimated_minutes": 16, "content": "Log file integrity validation."}]},
-            {"module_number": "07", "title": "Monitoring", "description": "GuardDuty, Security Hub, AWS Config.", "lessons": [{"title": "Threat Detection with Amazon GuardDuty", "slug": "guardduty-detection", "lesson_type": "theory", "estimated_minutes": 15, "content": "Detecting cryptocurrency mining and compromised IAM keys."}]},
-            {"module_number": "08", "title": "Least Privilege", "description": "IAM Access Analyzer and credential cleanup.", "lessons": [{"title": "Pruning Unused IAM Permissions with Access Analyzer", "slug": "access-analyzer", "lesson_type": "hands-on", "estimated_minutes": 16, "content": "Automated permission reduction."}]},
-            {"module_number": "09", "title": "Cloud Security Architecture", "description": "CIS Benchmarks and compliance reporting.", "lessons": [{"title": "Automated CIS Benchmark Compliance Auditing", "slug": "cis-benchmarks", "lesson_type": "hands-on", "estimated_minutes": 22, "content": "Running Prowler scans against multi-account infrastructure."}]}
-        ]
-    }
+            {
+                "module_number": "01",
+                "title": "Security Fundamentals",
+                "description": "CIA triad and threat modeling in the cloud.",
+                "lessons": [
+                    {
+                        "title": "Cloud Threat Modeling & Attack Vectors",
+                        "slug": "cloud-threat-modeling",
+                        "lesson_type": "theory",
+                        "estimated_minutes": 15,
+                        "content": "Identifying external and insider threat actors.",
+                    }
+                ],
+            },
+            {
+                "module_number": "02",
+                "title": "IAM",
+                "description": "Service Control Policies, permissions boundaries.",
+                "lessons": [
+                    {
+                        "title": "AWS Organizations & Service Control Policies (SCPs)",
+                        "slug": "scps-iam",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 18,
+                        "content": "Enforcing guardrails that even account root users cannot bypass.",
+                    }
+                ],
+            },
+            {
+                "module_number": "03",
+                "title": "Network Security",
+                "description": "Private subnets, VPC peering, Transit Gateways.",
+                "lessons": [
+                    {
+                        "title": "Zero-Trust VPC Network Architecture",
+                        "slug": "zero-trust-vpc",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 20,
+                        "content": "Eliminating public IPs on backend application and database tiers.",
+                    }
+                ],
+            },
+            {
+                "module_number": "04",
+                "title": "Encryption",
+                "description": "KMS, TLS 1.3, client-side encryption.",
+                "lessons": [
+                    {
+                        "title": "KMS Customer Managed Keys & Key Rotation",
+                        "slug": "kms-key-rotation",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 15,
+                        "content": "Automating annual cryptographic key rotation.",
+                    }
+                ],
+            },
+            {
+                "module_number": "05",
+                "title": "Secrets",
+                "description": "Secrets Manager and rotation lambdas.",
+                "lessons": [
+                    {
+                        "title": "Automated Database Password Rotation",
+                        "slug": "automated-secret-rotation",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 20,
+                        "content": "Using AWS Secrets Manager with RDS rotation Lambdas.",
+                    }
+                ],
+            },
+            {
+                "module_number": "06",
+                "title": "Logging",
+                "description": "CloudTrail, VPC Flow Logs, S3 Access Logs.",
+                "lessons": [
+                    {
+                        "title": "Enabling Immutable CloudTrail Multi-Region Logs",
+                        "slug": "immutable-cloudtrail",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 16,
+                        "content": "Log file integrity validation.",
+                    }
+                ],
+            },
+            {
+                "module_number": "07",
+                "title": "Monitoring",
+                "description": "GuardDuty, Security Hub, AWS Config.",
+                "lessons": [
+                    {
+                        "title": "Threat Detection with Amazon GuardDuty",
+                        "slug": "guardduty-detection",
+                        "lesson_type": "theory",
+                        "estimated_minutes": 15,
+                        "content": "Detecting cryptocurrency mining and compromised IAM keys.",
+                    }
+                ],
+            },
+            {
+                "module_number": "08",
+                "title": "Least Privilege",
+                "description": "IAM Access Analyzer and credential cleanup.",
+                "lessons": [
+                    {
+                        "title": "Pruning Unused IAM Permissions with Access Analyzer",
+                        "slug": "access-analyzer",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 16,
+                        "content": "Automated permission reduction.",
+                    }
+                ],
+            },
+            {
+                "module_number": "09",
+                "title": "Cloud Security Architecture",
+                "description": "CIS Benchmarks and compliance reporting.",
+                "lessons": [
+                    {
+                        "title": "Automated CIS Benchmark Compliance Auditing",
+                        "slug": "cis-benchmarks",
+                        "lesson_type": "hands-on",
+                        "estimated_minutes": 22,
+                        "content": "Running Prowler scans against multi-account infrastructure.",
+                    }
+                ],
+            },
+        ],
+    },
 ]
 
 
 async def seed_courses(db: AsyncSession) -> None:
     """Seed courses, modules, lessons, and resources if not present."""
     logger.info("Starting Core Curriculum database seeding...")
-    
+
     for c_data in COURSES_DATA:
         existing = await db.execute(select(Course).where(Course.slug == c_data["slug"]))
         course = existing.scalars().first()
-        
+
         if not course:
             course = Course(
                 slug=c_data["slug"],
@@ -422,7 +1796,7 @@ async def seed_courses(db: AsyncSession) -> None:
             for mod_idx, m_data in enumerate(c_data.get("modules", [])):
                 module = CourseModule(
                     course_id=course.id,
-                    module_number=m_data.get("module_number", f"{mod_idx+1:02d}"),
+                    module_number=m_data.get("module_number", f"{mod_idx + 1:02d}"),
                     title=m_data["title"],
                     description=m_data.get("description"),
                     order_index=mod_idx,
@@ -437,7 +1811,10 @@ async def seed_courses(db: AsyncSession) -> None:
                         title=l_data["title"],
                         slug=l_data["slug"],
                         description=l_data.get("description", l_data["title"]),
-                        content=l_data.get("content", f"# {l_data['title']}\n\nLesson content placeholder."),
+                        content=l_data.get(
+                            "content",
+                            f"# {l_data['title']}\n\nLesson content placeholder.",
+                        ),
                         lesson_type=l_data.get("lesson_type", "theory"),
                         estimated_minutes=l_data.get("estimated_minutes", 15),
                         order_index=les_idx,
@@ -471,9 +1848,15 @@ async def seed_demo_student_progress(db: AsyncSession):
     - ~38.5 hours of calculated study time
     """
     from datetime import timedelta
+
     from app.core.security import get_password_hash
     from app.models.course import CourseEnrollment, EnrollmentStatus
-    from app.models.progress import ActivityType, LearningActivity, LessonProgress, LessonProgressStatus
+    from app.models.progress import (
+        ActivityType,
+        LearningActivity,
+        LessonProgress,
+        LessonProgressStatus,
+    )
     from app.models.user import User, UserRole
 
     logger.info("Seeding demo student progress...")
@@ -528,8 +1911,8 @@ async def seed_demo_student_progress(db: AsyncSession):
             await db.flush()
 
         # Complete all lessons in DevOps Foundations (~24 hours = 86400s)
-        for mod in (devops_course.modules or []):
-            for les in (mod.lessons or []):
+        for mod in devops_course.modules or []:
+            for les in mod.lessons or []:
                 prog_res = await db.execute(
                     select(LessonProgress).where(
                         LessonProgress.user_id == student.id,
@@ -629,7 +2012,7 @@ async def seed_demo_student_progress(db: AsyncSession):
         # Check if activity exists on this date
         start_of_day = activity_time.replace(hour=0, minute=0, second=0, microsecond=0)
         end_of_day = start_of_day + timedelta(days=1)
-        
+
         act_res = await db.execute(
             select(LearningActivity).where(
                 LearningActivity.user_id == student.id,
@@ -640,7 +2023,9 @@ async def seed_demo_student_progress(db: AsyncSession):
         if not act_res.scalars().first():
             act = LearningActivity(
                 user_id=student.id,
-                activity_type=ActivityType.LESSON_COMPLETED.value if day_offset > 0 else ActivityType.LESSON_STARTED.value,
+                activity_type=ActivityType.LESSON_COMPLETED.value
+                if day_offset > 0
+                else ActivityType.LESSON_STARTED.value,
                 course_id=k8s_course.id if k8s_course else None,
                 duration_seconds=3600,
                 activity_metadata={"seeded": True, "day_offset": day_offset},
@@ -656,8 +2041,13 @@ async def seed_skills_and_roadmaps(db: AsyncSession):
     """
     Seed 16 technical skills, course-skill associations, and 4 comprehensive career roadmaps.
     """
-    from app.models.roadmap import Roadmap, RoadmapStep, RoadmapStepType, UserRoadmapProgress
-    from app.models.skill import CourseSkill, Skill, SkillCategory
+    from app.models.roadmap import (
+        Roadmap,
+        RoadmapStep,
+        RoadmapStepType,
+        UserRoadmapProgress,
+    )
+    from app.models.skill import CourseSkill, Skill
     from app.models.user import User
 
     logger.info("Starting Skills & Career Roadmaps seeding...")
@@ -668,22 +2058,134 @@ async def seed_skills_and_roadmaps(db: AsyncSession):
 
     # 2. Seed Skills Definition
     SKILLS_DATA = [
-        {"slug": "linux", "name": "Linux & Systems Administration", "category": "DevOps", "target_level": 4, "trend": "+4%", "description": "Filesystem hierarchy, POSIX standards, process diagnostics, systemd, and Bash scripting."},
-        {"slug": "git", "name": "Git & Version Control", "category": "DevOps", "target_level": 4, "trend": "+12%", "description": "Trunk-based development, interactive rebase, branch protection rules, and commit hygiene."},
-        {"slug": "docker", "name": "Docker & Containerization", "category": "DevOps", "target_level": 4, "trend": "+8%", "description": "Linux namespaces, cgroups, multi-stage builds, rootless containers, and container networking."},
-        {"slug": "kubernetes", "name": "Kubernetes Orchestration", "category": "Kubernetes", "target_level": 4, "trend": "+12%", "description": "Control plane machinery, Deployments, Services, Ingress, RBAC, NetworkPolicies, and CrashLoopBackOff debugging."},
-        {"slug": "terraform", "name": "Terraform & IaC", "category": "Cloud", "target_level": 4, "trend": "+4%", "description": "Declarative HCL syntax, remote S3 state locking, reusable modules, and multi-cloud provisioning."},
-        {"slug": "aws", "name": "AWS Cloud Architecture", "category": "Cloud", "target_level": 4, "trend": "+8%", "description": "Multi-AZ VPC networks, EC2/EKS compute, S3 storage, IAM least-privilege, and Well-Architected Framework."},
-        {"slug": "azure", "name": "Microsoft Azure Architecture", "category": "Cloud", "target_level": 3, "trend": "+5%", "description": "VNets, Azure Kubernetes Service (AKS), Entra ID, and Azure Resource Manager (ARM)."},
-        {"slug": "cicd", "name": "CI/CD Automation", "category": "DevOps", "target_level": 4, "trend": "+12%", "description": "GitHub Actions deterministic workflows, automated test runners, artifact promotion, and security verification."},
-        {"slug": "devsecops", "name": "DevSecOps & Security Automation", "category": "DevSecOps", "target_level": 4, "trend": "+8%", "description": "Shift-left security, secret scanning with Gitleaks, SAST with Semgrep, and Trivy image scanning."},
-        {"slug": "cloud-security", "name": "Cloud Security & IAM", "category": "Security", "target_level": 4, "trend": "+6%", "description": "KMS envelope encryption, least privilege IAM policies, zero-trust microsegmentation, and CIS benchmarks."},
-        {"slug": "observability", "name": "Observability & Telemetry", "category": "Observability", "target_level": 4, "trend": "+4%", "description": "Prometheus PromQL metrics, Grafana dashboards, Loki structured logging, OpenTelemetry tracing, and SLO burn rates."},
-        {"slug": "ai-devops", "name": "AI for Cloud & DevOps", "category": "AI", "target_level": 4, "trend": "+12%", "description": "LLM prompt engineering, runbook RAG with vector search, automated CI/CD failure analysis, and autonomous SRE copilots."},
-        {"slug": "python", "name": "Python for Platform Engineering", "category": "Programming", "target_level": 4, "trend": "+7%", "description": "AsyncIO concurrency, Pydantic data validation, FastAPI microservices, and boto3 cloud automation."},
-        {"slug": "networking", "name": "Networking & VPC Architecture", "category": "Infrastructure", "target_level": 4, "trend": "+5%", "description": "OSI stack, TCP/IP, DNS, CIDR address calculation, routing tables, and load balancing."},
-        {"slug": "gitops", "name": "GitOps & Continuous Delivery", "category": "DevOps", "target_level": 4, "trend": "+10%", "description": "Declarative Git-driven Kubernetes reconciliation, Argo CD ApplicationSets, and progressive canary rollouts."},
-        {"slug": "helm", "name": "Helm Package Management", "category": "Kubernetes", "target_level": 4, "trend": "+6%", "description": "Authoring enterprise Helm charts, values overlays, template functions, and release lifecycle hooks."},
+        {
+            "slug": "linux",
+            "name": "Linux & Systems Administration",
+            "category": "DevOps",
+            "target_level": 4,
+            "trend": "+4%",
+            "description": "Filesystem hierarchy, POSIX standards, process diagnostics, systemd, and Bash scripting.",
+        },
+        {
+            "slug": "git",
+            "name": "Git & Version Control",
+            "category": "DevOps",
+            "target_level": 4,
+            "trend": "+12%",
+            "description": "Trunk-based development, interactive rebase, branch protection rules, and commit hygiene.",
+        },
+        {
+            "slug": "docker",
+            "name": "Docker & Containerization",
+            "category": "DevOps",
+            "target_level": 4,
+            "trend": "+8%",
+            "description": "Linux namespaces, cgroups, multi-stage builds, rootless containers, and container networking.",
+        },
+        {
+            "slug": "kubernetes",
+            "name": "Kubernetes Orchestration",
+            "category": "Kubernetes",
+            "target_level": 4,
+            "trend": "+12%",
+            "description": "Control plane machinery, Deployments, Services, Ingress, RBAC, NetworkPolicies, and CrashLoopBackOff debugging.",
+        },
+        {
+            "slug": "terraform",
+            "name": "Terraform & IaC",
+            "category": "Cloud",
+            "target_level": 4,
+            "trend": "+4%",
+            "description": "Declarative HCL syntax, remote S3 state locking, reusable modules, and multi-cloud provisioning.",
+        },
+        {
+            "slug": "aws",
+            "name": "AWS Cloud Architecture",
+            "category": "Cloud",
+            "target_level": 4,
+            "trend": "+8%",
+            "description": "Multi-AZ VPC networks, EC2/EKS compute, S3 storage, IAM least-privilege, and Well-Architected Framework.",
+        },
+        {
+            "slug": "azure",
+            "name": "Microsoft Azure Architecture",
+            "category": "Cloud",
+            "target_level": 3,
+            "trend": "+5%",
+            "description": "VNets, Azure Kubernetes Service (AKS), Entra ID, and Azure Resource Manager (ARM).",
+        },
+        {
+            "slug": "cicd",
+            "name": "CI/CD Automation",
+            "category": "DevOps",
+            "target_level": 4,
+            "trend": "+12%",
+            "description": "GitHub Actions deterministic workflows, automated test runners, artifact promotion, and security verification.",
+        },
+        {
+            "slug": "devsecops",
+            "name": "DevSecOps & Security Automation",
+            "category": "DevSecOps",
+            "target_level": 4,
+            "trend": "+8%",
+            "description": "Shift-left security, secret scanning with Gitleaks, SAST with Semgrep, and Trivy image scanning.",
+        },
+        {
+            "slug": "cloud-security",
+            "name": "Cloud Security & IAM",
+            "category": "Security",
+            "target_level": 4,
+            "trend": "+6%",
+            "description": "KMS envelope encryption, least privilege IAM policies, zero-trust microsegmentation, and CIS benchmarks.",
+        },
+        {
+            "slug": "observability",
+            "name": "Observability & Telemetry",
+            "category": "Observability",
+            "target_level": 4,
+            "trend": "+4%",
+            "description": "Prometheus PromQL metrics, Grafana dashboards, Loki structured logging, OpenTelemetry tracing, and SLO burn rates.",
+        },
+        {
+            "slug": "ai-devops",
+            "name": "AI for Cloud & DevOps",
+            "category": "AI",
+            "target_level": 4,
+            "trend": "+12%",
+            "description": "LLM prompt engineering, runbook RAG with vector search, automated CI/CD failure analysis, and autonomous SRE copilots.",
+        },
+        {
+            "slug": "python",
+            "name": "Python for Platform Engineering",
+            "category": "Programming",
+            "target_level": 4,
+            "trend": "+7%",
+            "description": "AsyncIO concurrency, Pydantic data validation, FastAPI microservices, and boto3 cloud automation.",
+        },
+        {
+            "slug": "networking",
+            "name": "Networking & VPC Architecture",
+            "category": "Infrastructure",
+            "target_level": 4,
+            "trend": "+5%",
+            "description": "OSI stack, TCP/IP, DNS, CIDR address calculation, routing tables, and load balancing.",
+        },
+        {
+            "slug": "gitops",
+            "name": "GitOps & Continuous Delivery",
+            "category": "DevOps",
+            "target_level": 4,
+            "trend": "+10%",
+            "description": "Declarative Git-driven Kubernetes reconciliation, Argo CD ApplicationSets, and progressive canary rollouts.",
+        },
+        {
+            "slug": "helm",
+            "name": "Helm Package Management",
+            "category": "Kubernetes",
+            "target_level": 4,
+            "trend": "+6%",
+            "description": "Authoring enterprise Helm charts, values overlays, template functions, and release lifecycle hooks.",
+        },
     ]
 
     skills_map = {}
@@ -728,10 +2230,14 @@ async def seed_skills_and_roadmaps(db: AsyncSession):
                         )
                     )
                     if not cs_res.scalars().first():
-                        db.add(CourseSkill(course_id=course.id, skill_id=skill.id, weight=1.0))
+                        db.add(
+                            CourseSkill(
+                                course_id=course.id, skill_id=skill.id, weight=1.0
+                            )
+                        )
 
     # 4. Seed Career Roadmaps
-    ROADMAPS_DATA = [
+    ROADMAPS_DATA: List[Dict[str, Any]] = [
         {
             "slug": "cloud-engineer",
             "title": "Cloud Engineer Roadmap",
@@ -741,17 +2247,78 @@ async def seed_skills_and_roadmaps(db: AsyncSession):
             "skills_count": 18,
             "projects_count": 4,
             "description": "Master hyperscale infrastructure, VPC networking, security posture, and Infrastructure as Code to architect production workloads on AWS and Azure.",
-            "certifications_targeted": ["AWS Certified Cloud Practitioner", "Microsoft Azure Fundamentals AZ-900"],
+            "certifications_targeted": [
+                "AWS Certified Cloud Practitioner",
+                "Microsoft Azure Fundamentals AZ-900",
+            ],
             "steps": [
-                {"title": "Linux Fundamentals", "step_type": "course", "course_slug": "devops-engineering-foundations", "skill_slug": "linux", "estimated_hours": "25h", "skills": ["Linux", "Bash", "SSH"], "description": "Filesystem hierarchy, process management, shell scripting, and remote SSH administration."},
-                {"title": "Networking Fundamentals", "step_type": "skill", "skill_slug": "networking", "estimated_hours": "30h", "skills": ["DNS", "Subnetting", "TCP/IP"], "description": "OSI model, TCP/IP, DNS, CIDR subnetting, routing tables, and firewalls."},
-                {"title": "Cloud Computing Foundations", "step_type": "course", "course_slug": "cloud-computing-foundations", "skill_slug": "aws", "estimated_hours": "35h", "skills": ["Cloud Architecture", "High Availability"], "description": "Shared responsibility, regions, availability zones, compute, object storage, and service models."},
-                {"title": "AWS / Azure Architecture", "step_type": "skill", "skill_slug": "aws", "estimated_hours": "50h", "skills": ["AWS EC2", "AWS VPC", "Azure VMs"], "description": "Core compute (EC2/VMs), networking (VPC/VNet), serverless (Lambda/Functions), and managed DBs."},
-                {"title": "Identity & Access Management (IAM)", "step_type": "skill", "skill_slug": "cloud-security", "estimated_hours": "25h", "skills": ["IAM", "RBAC", "STS"], "description": "Least-privilege policies, roles, cross-account STS tokens, OIDC federation, and security baselines."},
-                {"title": "Terraform & IaC", "step_type": "course", "course_slug": "infrastructure-as-code-with-terraform", "skill_slug": "terraform", "estimated_hours": "40h", "skills": ["Terraform", "HCL", "IaC"], "description": "Declarative infrastructure, state management, remote backends, and reusable infrastructure modules."},
-                {"title": "Cloud Security & Governance", "step_type": "skill", "skill_slug": "cloud-security", "estimated_hours": "30h", "skills": ["KMS", "WAF", "CloudTrail"], "description": "KMS key rotation, VPC flow logs, GuardDuty threat detection, and automated compliance policies."},
-                {"title": "Capstone: Resilient Multi-Tier Infrastructure", "step_type": "milestone", "estimated_hours": "35h", "skills": ["Architecture Design", "Disaster Recovery"], "description": "Architect and deploy an enterprise multi-AZ cloud application stack with automated failover."},
-            ]
+                {
+                    "title": "Linux Fundamentals",
+                    "step_type": "course",
+                    "course_slug": "devops-engineering-foundations",
+                    "skill_slug": "linux",
+                    "estimated_hours": "25h",
+                    "skills": ["Linux", "Bash", "SSH"],
+                    "description": "Filesystem hierarchy, process management, shell scripting, and remote SSH administration.",
+                },
+                {
+                    "title": "Networking Fundamentals",
+                    "step_type": "skill",
+                    "skill_slug": "networking",
+                    "estimated_hours": "30h",
+                    "skills": ["DNS", "Subnetting", "TCP/IP"],
+                    "description": "OSI model, TCP/IP, DNS, CIDR subnetting, routing tables, and firewalls.",
+                },
+                {
+                    "title": "Cloud Computing Foundations",
+                    "step_type": "course",
+                    "course_slug": "cloud-computing-foundations",
+                    "skill_slug": "aws",
+                    "estimated_hours": "35h",
+                    "skills": ["Cloud Architecture", "High Availability"],
+                    "description": "Shared responsibility, regions, availability zones, compute, object storage, and service models.",
+                },
+                {
+                    "title": "AWS / Azure Architecture",
+                    "step_type": "skill",
+                    "skill_slug": "aws",
+                    "estimated_hours": "50h",
+                    "skills": ["AWS EC2", "AWS VPC", "Azure VMs"],
+                    "description": "Core compute (EC2/VMs), networking (VPC/VNet), serverless (Lambda/Functions), and managed DBs.",
+                },
+                {
+                    "title": "Identity & Access Management (IAM)",
+                    "step_type": "skill",
+                    "skill_slug": "cloud-security",
+                    "estimated_hours": "25h",
+                    "skills": ["IAM", "RBAC", "STS"],
+                    "description": "Least-privilege policies, roles, cross-account STS tokens, OIDC federation, and security baselines.",
+                },
+                {
+                    "title": "Terraform & IaC",
+                    "step_type": "course",
+                    "course_slug": "infrastructure-as-code-with-terraform",
+                    "skill_slug": "terraform",
+                    "estimated_hours": "40h",
+                    "skills": ["Terraform", "HCL", "IaC"],
+                    "description": "Declarative infrastructure, state management, remote backends, and reusable infrastructure modules.",
+                },
+                {
+                    "title": "Cloud Security & Governance",
+                    "step_type": "skill",
+                    "skill_slug": "cloud-security",
+                    "estimated_hours": "30h",
+                    "skills": ["KMS", "WAF", "CloudTrail"],
+                    "description": "KMS key rotation, VPC flow logs, GuardDuty threat detection, and automated compliance policies.",
+                },
+                {
+                    "title": "Capstone: Resilient Multi-Tier Infrastructure",
+                    "step_type": "milestone",
+                    "estimated_hours": "35h",
+                    "skills": ["Architecture Design", "Disaster Recovery"],
+                    "description": "Architect and deploy an enterprise multi-AZ cloud application stack with automated failover.",
+                },
+            ],
         },
         {
             "slug": "devops-engineer",
@@ -762,19 +2329,96 @@ async def seed_skills_and_roadmaps(db: AsyncSession):
             "skills_count": 24,
             "projects_count": 6,
             "description": "The industry-standard path to becoming a high-impact DevOps & Site Reliability Engineer. From container runtimes to Kubernetes, GitOps, and production observability.",
-            "certifications_targeted": ["Kubernetes Fundamentals", "DevOps Foundations"],
+            "certifications_targeted": [
+                "Kubernetes Fundamentals",
+                "DevOps Foundations",
+            ],
             "steps": [
-                {"title": "Linux & Shell Scripting", "step_type": "course", "course_slug": "devops-engineering-foundations", "skill_slug": "linux", "estimated_hours": "30h", "skills": ["Linux", "Bash", "Systemd"], "description": "POSIX standards, memory/CPU diagnostic commands, systemd, and automated Bash scripts."},
-                {"title": "Git & Version Control", "step_type": "skill", "skill_slug": "git", "estimated_hours": "20h", "skills": ["Git", "GitHub", "CI Hooks"], "description": "Trunk-based development, interactive rebase, branch protection, and commit signing."},
-                {"title": "Docker & Containers", "step_type": "skill", "skill_slug": "docker", "estimated_hours": "35h", "skills": ["Docker", "OCI", "Compose"], "description": "Namespaces, cgroups, multi-stage builds, rootless security, and container networking."},
-                {"title": "CI/CD Automation", "step_type": "skill", "skill_slug": "cicd", "estimated_hours": "40h", "skills": ["GitHub Actions", "Pipelines", "Release"], "description": "GitHub Actions, automated test suites, artifact promotion, and ephemeral test environments."},
-                {"title": "Kubernetes Orchestration", "step_type": "course", "course_slug": "kubernetes-engineering", "skill_slug": "kubernetes", "estimated_hours": "55h", "skills": ["Kubernetes", "kubectl", "CNI"], "description": "Pods, Deployments, Services, Ingress, scheduling, and pod lifecycle debugging."},
-                {"title": "Helm Package Management", "step_type": "skill", "skill_slug": "helm", "estimated_hours": "20h", "skills": ["Helm", "Package Management"], "description": "Modular charts, templates, subcharts, dynamic values, and release management."},
-                {"title": "GitOps with Argo CD", "step_type": "course", "course_slug": "gitops-with-argo-cd", "skill_slug": "gitops", "estimated_hours": "30h", "skills": ["Argo CD", "GitOps", "Canary"], "description": "Declarative cluster synchronization, automated reconciliation, and canary rollouts with Argo Rollouts."},
-                {"title": "Observability & SRE", "step_type": "course", "course_slug": "observability-engineering", "skill_slug": "observability", "estimated_hours": "45h", "skills": ["Prometheus", "Grafana", "OTel"], "description": "Prometheus metrics, Grafana dashboards, Loki logging, OpenTelemetry tracing, and SLO management."},
-                {"title": "Cloud Infrastructure with Terraform", "step_type": "course", "course_slug": "infrastructure-as-code-with-terraform", "skill_slug": "terraform", "estimated_hours": "40h", "skills": ["AWS EKS", "Terraform", "VPC"], "description": "Provisioning managed Kubernetes (EKS/AKS) and supporting services using Terraform."},
-                {"title": "Production Capstone: Zero-Downtime SaaS Platform", "step_type": "milestone", "estimated_hours": "50h", "skills": ["SRE", "Production Readiness"], "description": "End-to-end GitOps delivery of a microservice architecture with auto-scaling and self-healing."},
-            ]
+                {
+                    "title": "Linux & Shell Scripting",
+                    "step_type": "course",
+                    "course_slug": "devops-engineering-foundations",
+                    "skill_slug": "linux",
+                    "estimated_hours": "30h",
+                    "skills": ["Linux", "Bash", "Systemd"],
+                    "description": "POSIX standards, memory/CPU diagnostic commands, systemd, and automated Bash scripts.",
+                },
+                {
+                    "title": "Git & Version Control",
+                    "step_type": "skill",
+                    "skill_slug": "git",
+                    "estimated_hours": "20h",
+                    "skills": ["Git", "GitHub", "CI Hooks"],
+                    "description": "Trunk-based development, interactive rebase, branch protection, and commit signing.",
+                },
+                {
+                    "title": "Docker & Containers",
+                    "step_type": "skill",
+                    "skill_slug": "docker",
+                    "estimated_hours": "35h",
+                    "skills": ["Docker", "OCI", "Compose"],
+                    "description": "Namespaces, cgroups, multi-stage builds, rootless security, and container networking.",
+                },
+                {
+                    "title": "CI/CD Automation",
+                    "step_type": "skill",
+                    "skill_slug": "cicd",
+                    "estimated_hours": "40h",
+                    "skills": ["GitHub Actions", "Pipelines", "Release"],
+                    "description": "GitHub Actions, automated test suites, artifact promotion, and ephemeral test environments.",
+                },
+                {
+                    "title": "Kubernetes Orchestration",
+                    "step_type": "course",
+                    "course_slug": "kubernetes-engineering",
+                    "skill_slug": "kubernetes",
+                    "estimated_hours": "55h",
+                    "skills": ["Kubernetes", "kubectl", "CNI"],
+                    "description": "Pods, Deployments, Services, Ingress, scheduling, and pod lifecycle debugging.",
+                },
+                {
+                    "title": "Helm Package Management",
+                    "step_type": "skill",
+                    "skill_slug": "helm",
+                    "estimated_hours": "20h",
+                    "skills": ["Helm", "Package Management"],
+                    "description": "Modular charts, templates, subcharts, dynamic values, and release management.",
+                },
+                {
+                    "title": "GitOps with Argo CD",
+                    "step_type": "course",
+                    "course_slug": "gitops-with-argo-cd",
+                    "skill_slug": "gitops",
+                    "estimated_hours": "30h",
+                    "skills": ["Argo CD", "GitOps", "Canary"],
+                    "description": "Declarative cluster synchronization, automated reconciliation, and canary rollouts with Argo Rollouts.",
+                },
+                {
+                    "title": "Observability & SRE",
+                    "step_type": "course",
+                    "course_slug": "observability-engineering",
+                    "skill_slug": "observability",
+                    "estimated_hours": "45h",
+                    "skills": ["Prometheus", "Grafana", "OTel"],
+                    "description": "Prometheus metrics, Grafana dashboards, Loki logging, OpenTelemetry tracing, and SLO management.",
+                },
+                {
+                    "title": "Cloud Infrastructure with Terraform",
+                    "step_type": "course",
+                    "course_slug": "infrastructure-as-code-with-terraform",
+                    "skill_slug": "terraform",
+                    "estimated_hours": "40h",
+                    "skills": ["AWS EKS", "Terraform", "VPC"],
+                    "description": "Provisioning managed Kubernetes (EKS/AKS) and supporting services using Terraform.",
+                },
+                {
+                    "title": "Production Capstone: Zero-Downtime SaaS Platform",
+                    "step_type": "milestone",
+                    "estimated_hours": "50h",
+                    "skills": ["SRE", "Production Readiness"],
+                    "description": "End-to-end GitOps delivery of a microservice architecture with auto-scaling and self-healing.",
+                },
+            ],
         },
         {
             "slug": "devsecops-engineer",
@@ -785,17 +2429,76 @@ async def seed_skills_and_roadmaps(db: AsyncSession):
             "skills_count": 19,
             "projects_count": 4,
             "description": "Embed automated security into every phase of the CI/CD pipeline: static analysis, secret detection, container image signing, and Kubernetes admission controllers.",
-            "certifications_targeted": ["DevSecOps Practitioner", "Kubernetes Security"],
+            "certifications_targeted": [
+                "DevSecOps Practitioner",
+                "Kubernetes Security",
+            ],
             "steps": [
-                {"title": "Linux Security Baselines", "step_type": "skill", "skill_slug": "linux", "estimated_hours": "25h", "skills": ["Linux", "SELinux", "Hardening"], "description": "File permissions, POSIX capabilities, SELinux/AppArmor, and kernel hardening."},
-                {"title": "Secure Git & Pre-commit Hooks", "step_type": "skill", "skill_slug": "git", "estimated_hours": "20h", "skills": ["Gitleaks", "GPG", "Git Hygiene"], "description": "Detecting secrets before commit using Gitleaks, signed GPG commits, and CODEOWNERS."},
-                {"title": "Secure CI/CD Pipelines", "step_type": "skill", "skill_slug": "cicd", "estimated_hours": "35h", "skills": ["CI Security", "OIDC", "Hardening"], "description": "Hardened GitHub Actions runners, OIDC short-lived credentials, and pipeline tamper-resistance."},
-                {"title": "Static Application Security (SAST)", "step_type": "skill", "skill_slug": "devsecops", "estimated_hours": "30h", "skills": ["Semgrep", "SonarQube", "SAST"], "description": "Writing Semgrep custom rules, integrating SonarQube quality gates, and automated code review."},
-                {"title": "Dependency Security & SBOM", "step_type": "skill", "skill_slug": "devsecops", "estimated_hours": "25h", "skills": ["Syft", "SBOM", "Snyk"], "description": "Software supply chain auditing, Dependabot, and generating signed CycloneDX SBOMs with Syft."},
-                {"title": "Container Security & Scanning", "step_type": "skill", "skill_slug": "devsecops", "estimated_hours": "35h", "skills": ["Trivy", "Cosign", "Image Hardening"], "description": "Scanning base images with Trivy, distroless runtimes, and signing images with Cosign / Sigstore."},
-                {"title": "DevSecOps Engineering Masterclass", "step_type": "course", "course_slug": "devsecops-engineering", "skill_slug": "devsecops", "estimated_hours": "40h", "skills": ["Kyverno", "NetworkPolicies", "RBAC"], "description": "Pod Security Standards, Calico NetworkPolicies, and validating admission controllers with Kyverno."},
-                {"title": "DevSecOps Capstone Pipeline Project", "step_type": "milestone", "estimated_hours": "35h", "skills": ["GuardDuty", "SecurityHub", "CIS"], "description": "Zero-trust IAM boundaries, CloudTrail anomaly detection, and automated CIS benchmarks."},
-            ]
+                {
+                    "title": "Linux Security Baselines",
+                    "step_type": "skill",
+                    "skill_slug": "linux",
+                    "estimated_hours": "25h",
+                    "skills": ["Linux", "SELinux", "Hardening"],
+                    "description": "File permissions, POSIX capabilities, SELinux/AppArmor, and kernel hardening.",
+                },
+                {
+                    "title": "Secure Git & Pre-commit Hooks",
+                    "step_type": "skill",
+                    "skill_slug": "git",
+                    "estimated_hours": "20h",
+                    "skills": ["Gitleaks", "GPG", "Git Hygiene"],
+                    "description": "Detecting secrets before commit using Gitleaks, signed GPG commits, and CODEOWNERS.",
+                },
+                {
+                    "title": "Secure CI/CD Pipelines",
+                    "step_type": "skill",
+                    "skill_slug": "cicd",
+                    "estimated_hours": "35h",
+                    "skills": ["CI Security", "OIDC", "Hardening"],
+                    "description": "Hardened GitHub Actions runners, OIDC short-lived credentials, and pipeline tamper-resistance.",
+                },
+                {
+                    "title": "Static Application Security (SAST)",
+                    "step_type": "skill",
+                    "skill_slug": "devsecops",
+                    "estimated_hours": "30h",
+                    "skills": ["Semgrep", "SonarQube", "SAST"],
+                    "description": "Writing Semgrep custom rules, integrating SonarQube quality gates, and automated code review.",
+                },
+                {
+                    "title": "Dependency Security & SBOM",
+                    "step_type": "skill",
+                    "skill_slug": "devsecops",
+                    "estimated_hours": "25h",
+                    "skills": ["Syft", "SBOM", "Snyk"],
+                    "description": "Software supply chain auditing, Dependabot, and generating signed CycloneDX SBOMs with Syft.",
+                },
+                {
+                    "title": "Container Security & Scanning",
+                    "step_type": "skill",
+                    "skill_slug": "devsecops",
+                    "estimated_hours": "35h",
+                    "skills": ["Trivy", "Cosign", "Image Hardening"],
+                    "description": "Scanning base images with Trivy, distroless runtimes, and signing images with Cosign / Sigstore.",
+                },
+                {
+                    "title": "DevSecOps Engineering Masterclass",
+                    "step_type": "course",
+                    "course_slug": "devsecops-engineering",
+                    "skill_slug": "devsecops",
+                    "estimated_hours": "40h",
+                    "skills": ["Kyverno", "NetworkPolicies", "RBAC"],
+                    "description": "Pod Security Standards, Calico NetworkPolicies, and validating admission controllers with Kyverno.",
+                },
+                {
+                    "title": "DevSecOps Capstone Pipeline Project",
+                    "step_type": "milestone",
+                    "estimated_hours": "35h",
+                    "skills": ["GuardDuty", "SecurityHub", "CIS"],
+                    "description": "Zero-trust IAM boundaries, CloudTrail anomaly detection, and automated CIS benchmarks.",
+                },
+            ],
         },
         {
             "slug": "ai-devops-engineer",
@@ -806,18 +2509,78 @@ async def seed_skills_and_roadmaps(db: AsyncSession):
             "skills_count": 22,
             "projects_count": 5,
             "description": "Pioneer the future of intelligent infrastructure operations. Build autonomous AI agents for incident diagnosis, automated code remediation, and RAG-powered SRE runbooks.",
-            "certifications_targeted": ["AI-900 Azure AI Fundamentals", "AI for Cloud & DevOps Certified"],
+            "certifications_targeted": [
+                "AI-900 Azure AI Fundamentals",
+                "AI for Cloud & DevOps Certified",
+            ],
             "steps": [
-                {"title": "Python for Platform Engineering", "step_type": "skill", "skill_slug": "python", "estimated_hours": "35h", "skills": ["Python", "AsyncIO", "Boto3"], "description": "AsyncIO, typing, httpx, interacting with cloud SDKs (boto3, kubernetes-client), and CLI tools."},
-                {"title": "Cloud & Kubernetes Foundations", "step_type": "course", "course_slug": "kubernetes-engineering", "skill_slug": "kubernetes", "estimated_hours": "40h", "skills": ["Kubernetes", "Prometheus", "APIs"], "description": "Understanding cluster APIs, metrics endpoints, logs streams, and deployment mechanics."},
-                {"title": "DevOps & Pipeline Automation", "step_type": "skill", "skill_slug": "cicd", "estimated_hours": "30h", "skills": ["Webhooks", "Pipelines", "Alerts"], "description": "Designing webhooks, GitHub Actions events, and PagerDuty alert integrations."},
-                {"title": "LLM Foundations & Prompt Engineering", "step_type": "skill", "skill_slug": "ai-devops", "estimated_hours": "30h", "skills": ["Prompt Engineering", "Structured JSON"], "description": "Few-shot prompting, JSON mode enforcement, token management, and structured schema outputs."},
-                {"title": "RAG for Infrastructure Runbooks", "step_type": "course", "course_slug": "ai-for-cloud-devops", "skill_slug": "ai-devops", "estimated_hours": "45h", "skills": ["RAG", "Vector DB", "Embeddings"], "description": "Vector embeddings, chunking strategies, pgvector, and semantic search over internal architecture docs."},
-                {"title": "AI-Powered CI/CD Failure Triage", "step_type": "skill", "skill_slug": "ai-devops", "estimated_hours": "35h", "skills": ["Log Analysis", "CI Triage"], "description": "Automated log parser extracting build failures, identifying root cause, and recommending fixes."},
-                {"title": "AI Incident Investigation & Telemetry", "step_type": "skill", "skill_slug": "ai-devops", "estimated_hours": "45h", "skills": ["Telemetry AI", "Root Cause Analysis"], "description": "Synthesizing Prometheus alerts, Jaeger distributed traces, and pod logs into root-cause hypotheses."},
-                {"title": "Autonomous SRE Agents with Human-in-the-Loop", "step_type": "milestone", "estimated_hours": "50h", "skills": ["AI Agents", "MCP", "Human-in-the-loop"], "description": "Building tool-calling agents using Model Context Protocol (MCP) with approval gates for production changes."},
-            ]
-        }
+                {
+                    "title": "Python for Platform Engineering",
+                    "step_type": "skill",
+                    "skill_slug": "python",
+                    "estimated_hours": "35h",
+                    "skills": ["Python", "AsyncIO", "Boto3"],
+                    "description": "AsyncIO, typing, httpx, interacting with cloud SDKs (boto3, kubernetes-client), and CLI tools.",
+                },
+                {
+                    "title": "Cloud & Kubernetes Foundations",
+                    "step_type": "course",
+                    "course_slug": "kubernetes-engineering",
+                    "skill_slug": "kubernetes",
+                    "estimated_hours": "40h",
+                    "skills": ["Kubernetes", "Prometheus", "APIs"],
+                    "description": "Understanding cluster APIs, metrics endpoints, logs streams, and deployment mechanics.",
+                },
+                {
+                    "title": "DevOps & Pipeline Automation",
+                    "step_type": "skill",
+                    "skill_slug": "cicd",
+                    "estimated_hours": "30h",
+                    "skills": ["Webhooks", "Pipelines", "Alerts"],
+                    "description": "Designing webhooks, GitHub Actions events, and PagerDuty alert integrations.",
+                },
+                {
+                    "title": "LLM Foundations & Prompt Engineering",
+                    "step_type": "skill",
+                    "skill_slug": "ai-devops",
+                    "estimated_hours": "30h",
+                    "skills": ["Prompt Engineering", "Structured JSON"],
+                    "description": "Few-shot prompting, JSON mode enforcement, token management, and structured schema outputs.",
+                },
+                {
+                    "title": "RAG for Infrastructure Runbooks",
+                    "step_type": "course",
+                    "course_slug": "ai-for-cloud-devops",
+                    "skill_slug": "ai-devops",
+                    "estimated_hours": "45h",
+                    "skills": ["RAG", "Vector DB", "Embeddings"],
+                    "description": "Vector embeddings, chunking strategies, pgvector, and semantic search over internal architecture docs.",
+                },
+                {
+                    "title": "AI-Powered CI/CD Failure Triage",
+                    "step_type": "skill",
+                    "skill_slug": "ai-devops",
+                    "estimated_hours": "35h",
+                    "skills": ["Log Analysis", "CI Triage"],
+                    "description": "Automated log parser extracting build failures, identifying root cause, and recommending fixes.",
+                },
+                {
+                    "title": "AI Incident Investigation & Telemetry",
+                    "step_type": "skill",
+                    "skill_slug": "ai-devops",
+                    "estimated_hours": "45h",
+                    "skills": ["Telemetry AI", "Root Cause Analysis"],
+                    "description": "Synthesizing Prometheus alerts, Jaeger distributed traces, and pod logs into root-cause hypotheses.",
+                },
+                {
+                    "title": "Autonomous SRE Agents with Human-in-the-Loop",
+                    "step_type": "milestone",
+                    "estimated_hours": "50h",
+                    "skills": ["AI Agents", "MCP", "Human-in-the-loop"],
+                    "description": "Building tool-calling agents using Model Context Protocol (MCP) with approval gates for production changes.",
+                },
+            ],
+        },
     ]
 
     for r_data in ROADMAPS_DATA:
@@ -840,9 +2603,12 @@ async def seed_skills_and_roadmaps(db: AsyncSession):
             db.add(roadmap)
             await db.flush()
 
-            for step_idx, s_info in enumerate(r_data["steps"]):
-                target_course = courses.get(s_info.get("course_slug"))
-                target_skill = skills_map.get(s_info.get("skill_slug"))
+            steps: List[Dict[str, Any]] = r_data.get("steps", [])
+            for step_idx, s_info in enumerate(steps):
+                step_course_slug = s_info.get("course_slug")
+                target_course = courses.get(str(step_course_slug)) if step_course_slug else None
+                step_skill_slug = s_info.get("skill_slug")
+                target_skill = skills_map.get(str(step_skill_slug)) if step_skill_slug else None
 
                 step = RoadmapStep(
                     roadmap_id=roadmap.id,
@@ -859,10 +2625,14 @@ async def seed_skills_and_roadmaps(db: AsyncSession):
                 db.add(step)
 
     # 5. Enroll Demo Student in DevOps Engineer Roadmap
-    student_res = await db.execute(select(User).where(User.email == "student@cloudforge.io"))
+    student_res = await db.execute(
+        select(User).where(User.email == "student@cloudforge.io")
+    )
     student = student_res.scalars().first()
     if student:
-        devops_rm_res = await db.execute(select(Roadmap).where(Roadmap.slug == "devops-engineer"))
+        devops_rm_res = await db.execute(
+            select(Roadmap).where(Roadmap.slug == "devops-engineer")
+        )
         devops_rm = devops_rm_res.scalars().first()
         if devops_rm:
             ur_res = await db.execute(
@@ -884,15 +2654,6 @@ async def seed_skills_and_roadmaps(db: AsyncSession):
     logger.info("Skills & Career Roadmaps seeding complete!")
 
 
-from app.models.certification import (
-    Certification,
-    CertificationLevel,
-    CertificationTraining,
-    UserCertificationEnrollment,
-    PracticeQuestion,
-)
-from app.models.certificate import Certificate, CertificateStatus
-
 CERTIFICATIONS_DATA: List[Dict[str, Any]] = [
     {
         "code": "CLF-C02",
@@ -909,10 +2670,26 @@ CERTIFICATIONS_DATA: List[Dict[str, Any]] = [
         "passing_score_percentage": 70,
         "icon_name": "aws",
         "domains": [
-            {"domain_name": "Cloud Concepts", "weight_percentage": 24, "question_count": 16},
-            {"domain_name": "Security and Compliance", "weight_percentage": 30, "question_count": 20},
-            {"domain_name": "Cloud Technology and Services", "weight_percentage": 34, "question_count": 22},
-            {"domain_name": "Billing, Pricing, and Support", "weight_percentage": 12, "question_count": 7},
+            {
+                "domain_name": "Cloud Concepts",
+                "weight_percentage": 24,
+                "question_count": 16,
+            },
+            {
+                "domain_name": "Security and Compliance",
+                "weight_percentage": 30,
+                "question_count": 20,
+            },
+            {
+                "domain_name": "Cloud Technology and Services",
+                "weight_percentage": 34,
+                "question_count": 22,
+            },
+            {
+                "domain_name": "Billing, Pricing, and Support",
+                "weight_percentage": 12,
+                "question_count": 7,
+            },
         ],
         "training": {
             "title": "AWS Cloud Practitioner Preparation Program",
@@ -930,7 +2707,7 @@ CERTIFICATIONS_DATA: List[Dict[str, Any]] = [
                     "Configuring IAM user password policies",
                     "Patching guest operating system on EC2 instances",
                     "Physical security and facility access at AWS data centers",
-                    "Encrypting client-side application data"
+                    "Encrypting client-side application data",
                 ],
                 "correct_option": 2,
                 "explanation": "AWS manages security OF the cloud, which includes physical data center security, hardware maintenance, and hypervisors. Customers manage security IN the cloud (IAM, OS patching, data encryption).",
@@ -945,7 +2722,7 @@ CERTIFICATIONS_DATA: List[Dict[str, Any]] = [
                     "Performance Efficiency",
                     "Cost Optimization",
                     "Reliability",
-                    "Operational Excellence"
+                    "Operational Excellence",
                 ],
                 "correct_option": 2,
                 "explanation": "The Reliability pillar focuses on ensuring a workload performs its intended function correctly and consistently, including distributed system design and automated fault recovery.",
@@ -960,7 +2737,7 @@ CERTIFICATIONS_DATA: List[Dict[str, Any]] = [
                     "Amazon SNS",
                     "Amazon SQS",
                     "Amazon Kinesis Data Streams",
-                    "Amazon EventBridge"
+                    "Amazon EventBridge",
                 ],
                 "correct_option": 1,
                 "explanation": "Amazon Simple Queue Service (SQS) is a fully managed message queuing service that enables decoupling and scaling of microservices and distributed systems.",
@@ -975,7 +2752,7 @@ CERTIFICATIONS_DATA: List[Dict[str, Any]] = [
                     "On-Demand Instances",
                     "Savings Plans",
                     "Reserved Instances",
-                    "Spot Instances"
+                    "Spot Instances",
                 ],
                 "correct_option": 3,
                 "explanation": "Amazon EC2 Spot Instances offer up to a 90% discount compared to On-Demand prices by utilizing spare EC2 compute capacity, but can be reclaimed by AWS with a 2-minute notice.",
@@ -990,7 +2767,7 @@ CERTIFICATIONS_DATA: List[Dict[str, Any]] = [
                     "AWS Identity and Access Management (IAM)",
                     "AWS Organizations",
                     "AWS Control Tower",
-                    "AWS Resource Access Manager (RAM)"
+                    "AWS Resource Access Manager (RAM)",
                 ],
                 "correct_option": 1,
                 "explanation": "AWS Organizations allows centralized management and governance across multiple AWS accounts with Service Control Policies (SCPs) and consolidated billing.",
@@ -1015,9 +2792,21 @@ CERTIFICATIONS_DATA: List[Dict[str, Any]] = [
         "passing_score_percentage": 70,
         "icon_name": "azure",
         "domains": [
-            {"domain_name": "Describe Cloud Concepts", "weight_percentage": 30, "question_count": 14},
-            {"domain_name": "Describe Azure Architecture and Services", "weight_percentage": 35, "question_count": 16},
-            {"domain_name": "Describe Azure Management and Governance", "weight_percentage": 35, "question_count": 15},
+            {
+                "domain_name": "Describe Cloud Concepts",
+                "weight_percentage": 30,
+                "question_count": 14,
+            },
+            {
+                "domain_name": "Describe Azure Architecture and Services",
+                "weight_percentage": 35,
+                "question_count": 16,
+            },
+            {
+                "domain_name": "Describe Azure Management and Governance",
+                "weight_percentage": 35,
+                "question_count": 15,
+            },
         ],
         "training": {
             "title": "Microsoft Azure Fundamentals Training Program",
@@ -1035,7 +2824,7 @@ CERTIFICATIONS_DATA: List[Dict[str, Any]] = [
                     "Lower network latency to on-premises data centers",
                     "Protection against physical datacenter failures within the same region",
                     "Automatic zero-cost data replication across continents",
-                    "Automatic generation of ARM templates"
+                    "Automatic generation of ARM templates",
                 ],
                 "correct_option": 1,
                 "explanation": "Azure Availability Zones are physically separate locations within an Azure region, each with independent power, cooling, and networking, providing high availability against local failures.",
@@ -1050,7 +2839,7 @@ CERTIFICATIONS_DATA: List[Dict[str, Any]] = [
                     "Microsoft Entra ID (formerly Azure AD)",
                     "Azure Key Vault",
                     "Azure Active Directory Domain Services (AAD DS)",
-                    "Azure Bastion"
+                    "Azure Bastion",
                 ],
                 "correct_option": 0,
                 "explanation": "Microsoft Entra ID (formerly Azure Active Directory) is Microsoft's multi-tenant, cloud-based identity and access management service.",
@@ -1065,7 +2854,7 @@ CERTIFICATIONS_DATA: List[Dict[str, Any]] = [
                     "Azure Blueprints",
                     "Azure Policy",
                     "Azure Monitor",
-                    "Role-Based Access Control (RBAC)"
+                    "Role-Based Access Control (RBAC)",
                 ],
                 "correct_option": 1,
                 "explanation": "Azure Policy enables organizations to define and enforce rules (such as allowed location policies) across resource groups and subscriptions.",
@@ -1080,7 +2869,7 @@ CERTIFICATIONS_DATA: List[Dict[str, Any]] = [
                     "Software as a Service (SaaS)",
                     "Platform as a Service (PaaS)",
                     "Infrastructure as a Service (IaaS)",
-                    "Function as a Service (FaaS)"
+                    "Function as a Service (FaaS)",
                 ],
                 "correct_option": 2,
                 "explanation": "In Infrastructure as a Service (IaaS), customers retain complete administrative control over virtual machines, OS configuration, runtime software, and network firewall rules.",
@@ -1105,10 +2894,26 @@ CERTIFICATIONS_DATA: List[Dict[str, Any]] = [
         "passing_score_percentage": 70,
         "icon_name": "azure",
         "domains": [
-            {"domain_name": "Describe AI Workloads and Considerations", "weight_percentage": 20, "question_count": 9},
-            {"domain_name": "Describe Fundamental Principles of Machine Learning", "weight_percentage": 25, "question_count": 11},
-            {"domain_name": "Describe Features of Computer Vision Workloads", "weight_percentage": 20, "question_count": 9},
-            {"domain_name": "Describe Features of NLP and Generative AI", "weight_percentage": 35, "question_count": 16},
+            {
+                "domain_name": "Describe AI Workloads and Considerations",
+                "weight_percentage": 20,
+                "question_count": 9,
+            },
+            {
+                "domain_name": "Describe Fundamental Principles of Machine Learning",
+                "weight_percentage": 25,
+                "question_count": 11,
+            },
+            {
+                "domain_name": "Describe Features of Computer Vision Workloads",
+                "weight_percentage": 20,
+                "question_count": 9,
+            },
+            {
+                "domain_name": "Describe Features of NLP and Generative AI",
+                "weight_percentage": 35,
+                "question_count": 16,
+            },
         ],
         "training": {
             "title": "Azure AI Fundamentals Training Program",
@@ -1126,7 +2931,7 @@ CERTIFICATIONS_DATA: List[Dict[str, Any]] = [
                     "Fairness",
                     "Reliability and Safety",
                     "Transparency",
-                    "Accountability"
+                    "Accountability",
                 ],
                 "correct_option": 0,
                 "explanation": "The Microsoft Responsible AI principle of Fairness requires that AI systems treat all people impartially and avoid bias.",
@@ -1141,7 +2946,7 @@ CERTIFICATIONS_DATA: List[Dict[str, Any]] = [
                     "Binary Classification",
                     "Regression",
                     "Clustering",
-                    "Anomaly Detection"
+                    "Anomaly Detection",
                 ],
                 "correct_option": 1,
                 "explanation": "Regression algorithms predict continuous numerical output values (like prices or temperatures) based on input feature correlations.",
@@ -1156,7 +2961,7 @@ CERTIFICATIONS_DATA: List[Dict[str, Any]] = [
                     "Azure Computer Vision",
                     "Azure OpenAI Service",
                     "Azure Translator",
-                    "Azure Form Recognizer"
+                    "Azure Form Recognizer",
                 ],
                 "correct_option": 1,
                 "explanation": "Azure OpenAI Service provides REST API access to OpenAI's advanced language models including GPT-4 and embeddings, with enterprise security and responsible AI filters.",
@@ -1180,10 +2985,26 @@ CERTIFICATIONS_DATA: List[Dict[str, Any]] = [
         "passing_score_percentage": 75,
         "icon_name": "aws",
         "domains": [
-            {"domain_name": "VPC & Subnet Topologies", "weight_percentage": 30, "question_count": 9},
-            {"domain_name": "Compute & Autoscaling", "weight_percentage": 30, "question_count": 9},
-            {"domain_name": "IAM & Least Privilege", "weight_percentage": 25, "question_count": 8},
-            {"domain_name": "Storage & Databases", "weight_percentage": 15, "question_count": 4},
+            {
+                "domain_name": "VPC & Subnet Topologies",
+                "weight_percentage": 30,
+                "question_count": 9,
+            },
+            {
+                "domain_name": "Compute & Autoscaling",
+                "weight_percentage": 30,
+                "question_count": 9,
+            },
+            {
+                "domain_name": "IAM & Least Privilege",
+                "weight_percentage": 25,
+                "question_count": 8,
+            },
+            {
+                "domain_name": "Storage & Databases",
+                "weight_percentage": 15,
+                "question_count": 4,
+            },
         ],
         "training": {
             "title": "CloudForge AWS Cloud Foundations Track",
@@ -1201,7 +3022,7 @@ CERTIFICATIONS_DATA: List[Dict[str, Any]] = [
                     "In public subnets with direct Internet Gateways",
                     "In isolated private subnets with no direct internet ingress route",
                     "In the default VPC public subnet",
-                    "Attached directly to the NAT Gateway"
+                    "Attached directly to the NAT Gateway",
                 ],
                 "correct_option": 1,
                 "explanation": "Database tiers must be placed in isolated private subnets without public IPs and with route tables that do not route traffic to the Internet Gateway.",
@@ -1216,7 +3037,7 @@ CERTIFICATIONS_DATA: List[Dict[str, Any]] = [
                     "Security Groups are stateless at subnet level; NACLs are stateful at instance level",
                     "Security Groups operate at the instance level and are stateful; NACLs operate at the subnet level and are stateless",
                     "Security Groups only support DENY rules; NACLs only support ALLOW rules",
-                    "NACLs cannot filter outbound traffic"
+                    "NACLs cannot filter outbound traffic",
                 ],
                 "correct_option": 1,
                 "explanation": "Security Groups are stateful firewalls attached to ENIs/instances. NACLs are stateless packet filters applied at the subnet boundary.",
@@ -1231,7 +3052,7 @@ CERTIFICATIONS_DATA: List[Dict[str, Any]] = [
                     "IAM User Access Keys",
                     "IAM Roles attached via Instance Profile",
                     "IAM Group Policies",
-                    "Root account credentials"
+                    "Root account credentials",
                 ],
                 "correct_option": 1,
                 "explanation": "IAM Roles provide temporary credentials generated via AWS Security Token Service (STS) and attached to compute resources through Instance Profiles.",
@@ -1255,10 +3076,26 @@ CERTIFICATIONS_DATA: List[Dict[str, Any]] = [
         "passing_score_percentage": 75,
         "icon_name": "kubernetes",
         "domains": [
-            {"domain_name": "Control Plane & Cluster Architecture", "weight_percentage": 25, "question_count": 10},
-            {"domain_name": "Workload Management & Deployments", "weight_percentage": 30, "question_count": 12},
-            {"domain_name": "Services & Networking", "weight_percentage": 25, "question_count": 10},
-            {"domain_name": "RBAC & Cluster Security", "weight_percentage": 20, "question_count": 8},
+            {
+                "domain_name": "Control Plane & Cluster Architecture",
+                "weight_percentage": 25,
+                "question_count": 10,
+            },
+            {
+                "domain_name": "Workload Management & Deployments",
+                "weight_percentage": 30,
+                "question_count": 12,
+            },
+            {
+                "domain_name": "Services & Networking",
+                "weight_percentage": 25,
+                "question_count": 10,
+            },
+            {
+                "domain_name": "RBAC & Cluster Security",
+                "weight_percentage": 20,
+                "question_count": 8,
+            },
         ],
         "training": {
             "title": "CloudForge Kubernetes Core Engineering Track",
@@ -1276,7 +3113,7 @@ CERTIFICATIONS_DATA: List[Dict[str, Any]] = [
                     "kube-scheduler",
                     "kube-controller-manager",
                     "kube-apiserver",
-                    "kubelet"
+                    "kubelet",
                 ],
                 "correct_option": 2,
                 "explanation": "The kube-apiserver acts as the single point of entry and the sole component that directly interfaces with etcd to persist cluster state.",
@@ -1291,7 +3128,7 @@ CERTIFICATIONS_DATA: List[Dict[str, Any]] = [
                     "The Pod is removed from Service endpoints but continues running",
                     "The kubelet restarts the failing container according to its restartPolicy",
                     "The kube-scheduler reschedules the Pod to a different node immediately",
-                    "The node is marked NotReady by the controller manager"
+                    "The node is marked NotReady by the controller manager",
                 ],
                 "correct_option": 1,
                 "explanation": "When a liveness probe fails, kubelet kills the container and initiates a restart according to the Pod's restartPolicy. (Readiness probe failure removes it from endpoints).",
@@ -1302,12 +3139,7 @@ CERTIFICATIONS_DATA: List[Dict[str, Any]] = [
             {
                 "question_text": "Which Kubernetes Service type creates a dedicated external cloud load balancer and automatically routes traffic to NodePorts?",
                 "question_type": "single_choice",
-                "options": [
-                    "ClusterIP",
-                    "NodePort",
-                    "LoadBalancer",
-                    "ExternalName"
-                ],
+                "options": ["ClusterIP", "NodePort", "LoadBalancer", "ExternalName"],
                 "correct_option": 2,
                 "explanation": "A LoadBalancer Service provisions an external cloud load balancer (e.g. AWS NLB/ALB) and directs external traffic to the assigned NodePorts across the cluster.",
                 "topic": "Services & Networking",
@@ -1321,7 +3153,7 @@ CERTIFICATIONS_DATA: List[Dict[str, Any]] = [
                     "ClusterRoleBinding",
                     "RoleBinding",
                     "ServiceAccount",
-                    "NamespaceBinding"
+                    "NamespaceBinding",
                 ],
                 "correct_option": 1,
                 "explanation": "A RoleBinding can reference a ClusterRole to grant its defined permissions within the RoleBinding's specific namespace without granting cluster-wide access.",
@@ -1345,10 +3177,26 @@ CERTIFICATIONS_DATA: List[Dict[str, Any]] = [
         "passing_score_percentage": 75,
         "icon_name": "devops",
         "domains": [
-            {"domain_name": "Git & Trunk-Based Development", "weight_percentage": 25, "question_count": 8},
-            {"domain_name": "CI/CD Automation Pipelines", "weight_percentage": 30, "question_count": 9},
-            {"domain_name": "Docker & Multi-Stage Builds", "weight_percentage": 25, "question_count": 8},
-            {"domain_name": "Telemetry & Observability", "weight_percentage": 20, "question_count": 5},
+            {
+                "domain_name": "Git & Trunk-Based Development",
+                "weight_percentage": 25,
+                "question_count": 8,
+            },
+            {
+                "domain_name": "CI/CD Automation Pipelines",
+                "weight_percentage": 30,
+                "question_count": 9,
+            },
+            {
+                "domain_name": "Docker & Multi-Stage Builds",
+                "weight_percentage": 25,
+                "question_count": 8,
+            },
+            {
+                "domain_name": "Telemetry & Observability",
+                "weight_percentage": 20,
+                "question_count": 5,
+            },
         ],
         "training": {
             "title": "CloudForge DevOps Engineering Track",
@@ -1366,7 +3214,7 @@ CERTIFICATIONS_DATA: List[Dict[str, Any]] = [
                     "Allows running multiple containers inside a single Pod",
                     "Separates build-time dependencies from the final minimal runtime image",
                     "Automatically scans images for CVE vulnerabilities",
-                    "Enables Docker to run without root daemon privileges"
+                    "Enables Docker to run without root daemon privileges",
                 ],
                 "correct_option": 1,
                 "explanation": "Multi-stage builds allow using bulky compilers/SDKs in early stages and copying only the compiled artifacts into a lightweight distroless/alpine final image.",
@@ -1381,7 +3229,7 @@ CERTIFICATIONS_DATA: List[Dict[str, Any]] = [
                     "It executes faster than 10 seconds",
                     "Executing the step multiple times with the same input produces the exact same system state without unintended side-effects",
                     "It automatically rolls back on network timeouts",
-                    "It requires manual human approval before execution"
+                    "It requires manual human approval before execution",
                 ],
                 "correct_option": 1,
                 "explanation": "Idempotency ensures that running an operation repeatedly results in the same desired state, preventing configuration drift or duplicate resources.",
@@ -1396,7 +3244,7 @@ CERTIFICATIONS_DATA: List[Dict[str, Any]] = [
                     "CPU, Memory, Disk, Network",
                     "Latency, Traffic, Errors, Saturation",
                     "Availability, Scalability, Resiliency, Security",
-                    "SAST, DAST, SCA, SBOM"
+                    "SAST, DAST, SCA, SBOM",
                 ],
                 "correct_option": 1,
                 "explanation": "Google's SRE book defines the Four Golden Signals as Latency (time taken), Traffic (demand/throughput), Errors (failure rate), and Saturation (resource utilization headroom).",
@@ -1419,7 +3267,9 @@ async def seed_certifications_and_exams(db: AsyncSession) -> None:
 
     for cert_data in CERTIFICATIONS_DATA:
         # Check or create certification
-        res = await db.execute(select(Certification).where(Certification.slug == cert_data["slug"]))
+        res = await db.execute(
+            select(Certification).where(Certification.slug == cert_data["slug"])
+        )
         cert = res.scalars().first()
 
         level_enum = CertificationLevel(cert_data["level"])
@@ -1451,7 +3301,9 @@ async def seed_certifications_and_exams(db: AsyncSession) -> None:
         training = None
         if t_data:
             t_res = await db.execute(
-                select(CertificationTraining).where(CertificationTraining.slug == t_data["slug"])
+                select(CertificationTraining).where(
+                    CertificationTraining.slug == t_data["slug"]
+                )
             )
             training = t_res.scalars().first()
             linked_course = courses_map.get(t_data.get("course_slug"))
@@ -1496,7 +3348,9 @@ async def seed_certifications_and_exams(db: AsyncSession) -> None:
                 db.add(question)
 
     # 4. Enroll Demo Student in AWS Cloud Practitioner
-    student_res = await db.execute(select(User).where(User.email == "student@cloudforge.io"))
+    student_res = await db.execute(
+        select(User).where(User.email == "student@cloudforge.io")
+    )
     student = student_res.scalars().first()
     if student:
         t_res = await db.execute(
@@ -1604,7 +3458,9 @@ async def seed_projects(db: AsyncSession):
                     db.add(ProjectSkill(project_id=project.id, skill_id=skill.id))
 
     # Enroll demo student in Kubernetes Production Deployment & CloudForge CI/CD Pipeline
-    student_res = await db.execute(select(User).where(User.email == "student@cloudforge.io"))
+    student_res = await db.execute(
+        select(User).where(User.email == "student@cloudforge.io")
+    )
     student = student_res.scalars().first()
 
     if student:

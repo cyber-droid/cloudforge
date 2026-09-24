@@ -1,7 +1,9 @@
 """
 Certification Training Endpoints.
 """
+
 from typing import Optional
+
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 

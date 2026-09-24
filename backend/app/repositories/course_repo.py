@@ -3,24 +3,32 @@ Course, Module, Lesson, and Enrollment Repository Layer.
 
 Encapsulates all PostgreSQL queries with eager-loading strategies to eliminate N+1 query overhead.
 """
+
 from typing import List, Optional, Tuple
-from sqlalchemy import cast, func, or_, select, String, Text
+
+from sqlalchemy import ColumnElement, String, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.course import Course, CourseEnrollment, CourseModule, EnrollmentStatus, Lesson, LessonResource
+from app.models.course import (
+    Course,
+    CourseEnrollment,
+    CourseModule,
+    EnrollmentStatus,
+    Lesson,
+)
 
 
 class CourseRepository:
     """Data access methods for Course entities."""
 
-    async def get_by_id_or_slug(self, db: AsyncSession, *, identifier: str) -> Optional[Course]:
+    async def get_by_id_or_slug(
+        self, db: AsyncSession, *, identifier: str
+    ) -> Optional[Course]:
         """Fetch a course by either UUID or slug, eager-loading modules and lessons."""
         query = (
             select(Course)
-            .options(
-                selectinload(Course.modules).selectinload(CourseModule.lessons)
-            )
+            .options(selectinload(Course.modules).selectinload(CourseModule.lessons))
             .where(or_(Course.id == identifier, Course.slug == identifier))
         )
         result = await db.execute(query)
@@ -37,7 +45,7 @@ class CourseRepository:
         technology: Optional[str] = None,
         search: Optional[str] = None,
         certificate_available: Optional[bool] = None,
-        published_only: bool = True
+        published_only: bool = True,
     ) -> Tuple[List[Course], int]:
         """
         Query courses with SQL-level filtering, ILIKE search, and pagination.
@@ -48,15 +56,22 @@ class CourseRepository:
         )
         count_query = select(func.count(Course.id))
 
-        filters = []
+        filters: List[ColumnElement[bool]] = []
         if published_only:
             filters.append(Course.published.is_(True))
 
         if category and category != "All":
             if category == "Security":
-                filters.append(or_(Course.category == "Security", Course.category == "Cloud Security"))
+                filters.append(
+                    or_(
+                        Course.category == "Security",
+                        Course.category == "Cloud Security",
+                    )
+                )
             elif category == "AI":
-                filters.append(or_(Course.category == "AI", Course.category == "AI Engineering"))
+                filters.append(
+                    or_(Course.category == "AI", Course.category == "AI Engineering")
+                )
             else:
                 filters.append(Course.category.ilike(f"%{category}%"))
 
@@ -101,7 +116,9 @@ class CourseRepository:
 class ModuleRepository:
     """Data access methods for Course Modules."""
 
-    async def get_by_id(self, db: AsyncSession, *, module_id: str) -> Optional[CourseModule]:
+    async def get_by_id(
+        self, db: AsyncSession, *, module_id: str
+    ) -> Optional[CourseModule]:
         """Fetch module with all ordered lessons."""
         query = (
             select(CourseModule)
@@ -130,11 +147,7 @@ class EnrollmentRepository:
     """Data access methods for Course Enrollments."""
 
     async def get_by_user_and_course(
-        self,
-        db: AsyncSession,
-        *,
-        user_id: str,
-        course_id: str
+        self, db: AsyncSession, *, user_id: str, course_id: str
     ) -> Optional[CourseEnrollment]:
         """Check if user has an existing enrollment for a course."""
         query = (
@@ -149,11 +162,7 @@ class EnrollmentRepository:
         return result.scalars().first()
 
     async def create(
-        self,
-        db: AsyncSession,
-        *,
-        user_id: str,
-        course_id: str
+        self, db: AsyncSession, *, user_id: str, course_id: str
     ) -> CourseEnrollment:
         """Create a new active course enrollment."""
         enrollment = CourseEnrollment(
@@ -167,10 +176,7 @@ class EnrollmentRepository:
         return enrollment
 
     async def get_user_enrollments(
-        self,
-        db: AsyncSession,
-        *,
-        user_id: str
+        self, db: AsyncSession, *, user_id: str
     ) -> List[CourseEnrollment]:
         """Fetch all course enrollments for a user."""
         query = (
@@ -182,15 +188,11 @@ class EnrollmentRepository:
         result = await db.execute(query)
         return list(result.scalars().all())
 
-    async def delete(
-        self,
-        db: AsyncSession,
-        *,
-        user_id: str,
-        course_id: str
-    ) -> bool:
+    async def delete(self, db: AsyncSession, *, user_id: str, course_id: str) -> bool:
         """Cancel/delete a course enrollment."""
-        enrollment = await self.get_by_user_and_course(db, user_id=user_id, course_id=course_id)
+        enrollment = await self.get_by_user_and_course(
+            db, user_id=user_id, course_id=course_id
+        )
         if enrollment:
             await db.delete(enrollment)
             await db.commit()

@@ -9,7 +9,9 @@ Centralizes authentication extraction and security policies. Routes simply decla
 `current_user: User = Depends(get_current_user)` or
 `admin_user: User = Depends(require_roles(UserRole.ADMIN))` to enforce authorization.
 """
-from typing import Callable, List, Optional
+
+from typing import Callable, Optional
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,7 +27,7 @@ http_bearer = HTTPBearer(auto_error=False)
 
 async def get_current_user(
     db: AsyncSession = Depends(get_db),
-    token_auth: Optional[HTTPAuthorizationCredentials] = Depends(http_bearer)
+    token_auth: Optional[HTTPAuthorizationCredentials] = Depends(http_bearer),
 ) -> User:
     """
     Extract and validate JWT Bearer token from the Authorization header.
@@ -72,7 +74,7 @@ async def get_current_user(
 
 async def get_optional_current_user(
     db: AsyncSession = Depends(get_db),
-    token_auth: Optional[HTTPAuthorizationCredentials] = Depends(http_bearer)
+    token_auth: Optional[HTTPAuthorizationCredentials] = Depends(http_bearer),
 ) -> Optional[User]:
     """
     Optionally extract and validate JWT Bearer token.
@@ -87,7 +89,7 @@ async def get_optional_current_user(
 
 
 async def get_current_active_user(
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ) -> User:
     """Ensure current authenticated user is active."""
     return current_user
@@ -96,10 +98,11 @@ async def get_current_active_user(
 def require_roles(*allowed_roles: UserRole) -> Callable:
     """
     Role-Based Access Control (RBAC) Dependency Factory.
-    
+
     Usage:
         @router.get("/admin-only", dependencies=[Depends(require_roles(UserRole.ADMIN))])
     """
+
     async def role_checker(current_user: User = Depends(get_current_user)) -> User:
         if current_user.role not in allowed_roles:
             raise HTTPException(

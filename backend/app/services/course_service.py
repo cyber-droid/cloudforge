@@ -3,14 +3,21 @@ Course and Curriculum Business Service.
 
 Coordinates course catalogs, syllabus tree transformations, and student enrollment lifecycles.
 """
+
 from math import ceil
 from typing import List, Optional
+
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import logger
-from app.models.course import Course, CourseEnrollment, CourseModule, Lesson
-from app.repositories.course_repo import course_repo, enrollment_repo, lesson_repo, module_repo
+from app.models.course import Course
+from app.repositories.course_repo import (
+    course_repo,
+    enrollment_repo,
+    lesson_repo,
+    module_repo,
+)
 from app.schemas.course import (
     CourseCurriculumResponse,
     CourseDetailResponse,
@@ -32,7 +39,7 @@ class CourseService:
         """Helper to transform Course ORM entity to summary schema with computed counts."""
         modules = course.modules or []
         lessons_count = sum(len(m.lessons or []) for m in modules)
-        
+
         return CourseSummaryResponse(
             id=course.id,
             slug=course.slug,
@@ -60,9 +67,9 @@ class CourseService:
     def _to_course_detail(self, course: Course) -> CourseDetailResponse:
         """Helper to transform Course ORM entity into full detail schema with nested syllabus."""
         summary = self._to_course_summary(course)
-        
+
         module_responses: List[ModuleSummaryResponse] = []
-        for mod in (course.modules or []):
+        for mod in course.modules or []:
             lesson_summaries = [
                 LessonSummaryResponse(
                     id=les.id,
@@ -130,7 +137,9 @@ class CourseService:
             total_pages=total_pages,
         )
 
-    async def get_course(self, db: AsyncSession, *, identifier: str) -> CourseDetailResponse:
+    async def get_course(
+        self, db: AsyncSession, *, identifier: str
+    ) -> CourseDetailResponse:
         """Fetch course details by UUID or slug."""
         course = await course_repo.get_by_id_or_slug(db, identifier=identifier)
         if not course:
@@ -140,7 +149,9 @@ class CourseService:
             )
         return self._to_course_detail(course)
 
-    async def get_curriculum(self, db: AsyncSession, *, course_id: str) -> CourseCurriculumResponse:
+    async def get_curriculum(
+        self, db: AsyncSession, *, course_id: str
+    ) -> CourseCurriculumResponse:
         """Fetch full ordered syllabus tree for a course."""
         course = await course_repo.get_by_id_or_slug(db, identifier=course_id)
         if not course:
@@ -156,10 +167,14 @@ class CourseService:
             modules=detail.modules,
         )
 
-    async def get_module(self, db: AsyncSession, *, course_id: str, module_id: str) -> ModuleDetailResponse:
+    async def get_module(
+        self, db: AsyncSession, *, course_id: str, module_id: str
+    ) -> ModuleDetailResponse:
         """Fetch a specific module with full lesson details."""
         module = await module_repo.get_by_id(db, module_id=module_id)
-        if not module or (module.course_id != course_id and module.course.slug != course_id):
+        if not module or (
+            module.course_id != course_id and module.course.slug != course_id
+        ):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Module not found for this course.",
@@ -167,22 +182,25 @@ class CourseService:
 
         lesson_details = [
             LessonDetailResponse(
-                id=l.id,
-                module_id=l.module_id,
-                title=l.title,
-                slug=l.slug,
-                description=l.description,
-                content=l.content,
-                lesson_type=l.lesson_type,
-                estimated_minutes=l.estimated_minutes,
-                order_index=l.order_index,
-                video_url=l.video_url,
-                published=l.published,
-                resources=[LessonResourceResponse.model_validate(r) for r in (l.resources or [])],
-                created_at=l.created_at,
-                updated_at=l.updated_at,
+                id=lesson.id,
+                module_id=lesson.module_id,
+                title=lesson.title,
+                slug=lesson.slug,
+                description=lesson.description,
+                content=lesson.content,
+                lesson_type=lesson.lesson_type,
+                estimated_minutes=lesson.estimated_minutes,
+                order_index=lesson.order_index,
+                video_url=lesson.video_url,
+                published=lesson.published,
+                resources=[
+                    LessonResourceResponse.model_validate(r)
+                    for r in (lesson.resources or [])
+                ],
+                created_at=lesson.created_at,
+                updated_at=lesson.updated_at,
             )
-            for l in (module.lessons or [])
+            for lesson in (module.lessons or [])
         ]
 
         return ModuleDetailResponse(
@@ -196,7 +214,9 @@ class CourseService:
             lessons=lesson_details,
         )
 
-    async def get_lesson(self, db: AsyncSession, *, course_id: str, lesson_id: str) -> LessonDetailResponse:
+    async def get_lesson(
+        self, db: AsyncSession, *, course_id: str, lesson_id: str
+    ) -> LessonDetailResponse:
         """Fetch a specific lesson with content and resources."""
         lesson = await lesson_repo.get_by_id(db, lesson_id=lesson_id)
         if not lesson:
@@ -217,12 +237,17 @@ class CourseService:
             order_index=lesson.order_index,
             video_url=lesson.video_url,
             published=lesson.published,
-            resources=[LessonResourceResponse.model_validate(r) for r in (lesson.resources or [])],
+            resources=[
+                LessonResourceResponse.model_validate(r)
+                for r in (lesson.resources or [])
+            ],
             created_at=lesson.created_at,
             updated_at=lesson.updated_at,
         )
 
-    async def enroll_user(self, db: AsyncSession, *, user_id: str, course_identifier: str) -> CourseEnrollmentResponse:
+    async def enroll_user(
+        self, db: AsyncSession, *, user_id: str, course_identifier: str
+    ) -> CourseEnrollmentResponse:
         """Enroll student in a course with duplicate prevention."""
         course = await course_repo.get_by_id_or_slug(db, identifier=course_identifier)
         if not course:
@@ -231,14 +256,18 @@ class CourseService:
                 detail=f"Course '{course_identifier}' not found.",
             )
 
-        existing = await enrollment_repo.get_by_user_and_course(db, user_id=user_id, course_id=course.id)
+        existing = await enrollment_repo.get_by_user_and_course(
+            db, user_id=user_id, course_id=course.id
+        )
         if existing:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="User is already enrolled in this course.",
             )
 
-        enrollment = await enrollment_repo.create(db, user_id=user_id, course_id=course.id)
+        enrollment = await enrollment_repo.create(
+            db, user_id=user_id, course_id=course.id
+        )
         # Increment student count
         course.students_count += 1
         await db.commit()
@@ -246,6 +275,7 @@ class CourseService:
         # Log enrollment activity event for streak and timeline calculation
         from app.models.progress import ActivityType
         from app.repositories.progress_repo import activity_repo
+
         await activity_repo.log_activity(
             db,
             user_id=user_id,
@@ -265,7 +295,9 @@ class CourseService:
             course=self._to_course_summary(course),
         )
 
-    async def get_user_courses(self, db: AsyncSession, *, user_id: str) -> List[CourseEnrollmentResponse]:
+    async def get_user_courses(
+        self, db: AsyncSession, *, user_id: str
+    ) -> List[CourseEnrollmentResponse]:
         """Fetch all course enrollments for the current student."""
         enrollments = await enrollment_repo.get_user_enrollments(db, user_id=user_id)
         return [
@@ -282,11 +314,7 @@ class CourseService:
         ]
 
     async def get_user_course_enrollment(
-        self,
-        db: AsyncSession,
-        *,
-        user_id: str,
-        course_identifier: str
+        self, db: AsyncSession, *, user_id: str, course_identifier: str
     ) -> CourseEnrollmentResponse:
         """Get single course enrollment status for student."""
         course = await course_repo.get_by_id_or_slug(db, identifier=course_identifier)
@@ -296,7 +324,9 @@ class CourseService:
                 detail="Course not found.",
             )
 
-        enrollment = await enrollment_repo.get_by_user_and_course(db, user_id=user_id, course_id=course.id)
+        enrollment = await enrollment_repo.get_by_user_and_course(
+            db, user_id=user_id, course_id=course.id
+        )
         if not enrollment:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -313,7 +343,9 @@ class CourseService:
             course=self._to_course_summary(course),
         )
 
-    async def unenroll_user(self, db: AsyncSession, *, user_id: str, course_identifier: str) -> bool:
+    async def unenroll_user(
+        self, db: AsyncSession, *, user_id: str, course_identifier: str
+    ) -> bool:
         """Cancel/delete user course enrollment."""
         course = await course_repo.get_by_id_or_slug(db, identifier=course_identifier)
         if not course:

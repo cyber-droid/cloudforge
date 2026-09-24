@@ -3,9 +3,11 @@ Practice Question and Exam Attempt Repository.
 
 Handles querying question banks, starting new exam sessions, persisting student answers, and retrieving attempt history.
 """
-from datetime import datetime, timezone
+
 import random
+from datetime import datetime, timezone
 from typing import Dict, List, Optional, Tuple
+
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -41,7 +43,9 @@ class PracticeRepository:
             query = query.where(func.lower(PracticeQuestion.domain) == domain.lower())
 
         if difficulty and difficulty != "All":
-            query = query.where(func.lower(PracticeQuestion.difficulty) == difficulty.lower())
+            query = query.where(
+                func.lower(PracticeQuestion.difficulty) == difficulty.lower()
+            )
 
         result = await db.execute(query)
         all_matching = list(result.scalars().all())
@@ -102,10 +106,16 @@ class PracticeRepository:
         user_id: Optional[str] = None,
     ) -> Optional[PracticeAttempt]:
         """Fetch single exam attempt with eager loaded answers and questions."""
-        query = select(PracticeAttempt).options(
-            selectinload(PracticeAttempt.answers).selectinload(PracticeAttemptAnswer.question),
-            selectinload(PracticeAttempt.certification),
-        ).where(PracticeAttempt.id == attempt_id)
+        query = (
+            select(PracticeAttempt)
+            .options(
+                selectinload(PracticeAttempt.answers).selectinload(
+                    PracticeAttemptAnswer.question
+                ),
+                selectinload(PracticeAttempt.certification),
+            )
+            .where(PracticeAttempt.id == attempt_id)
+        )
 
         if user_id:
             query = query.where(PracticeAttempt.user_id == user_id)
@@ -125,9 +135,13 @@ class PracticeRepository:
         limit: int = 50,
     ) -> Tuple[List[PracticeAttempt], int]:
         """Fetch student's exam attempt history with filters."""
-        query = select(PracticeAttempt).options(
-            selectinload(PracticeAttempt.certification),
-        ).where(PracticeAttempt.user_id == user_id)
+        query = (
+            select(PracticeAttempt)
+            .options(
+                selectinload(PracticeAttempt.certification),
+            )
+            .where(PracticeAttempt.user_id == user_id)
+        )
 
         if certification_id:
             query = query.where(PracticeAttempt.certification_id == certification_id)
@@ -142,7 +156,9 @@ class PracticeRepository:
         total_res = await db.execute(count_query)
         total = total_res.scalar() or 0
 
-        query = query.order_by(PracticeAttempt.started_at.desc()).offset(skip).limit(limit)
+        query = (
+            query.order_by(PracticeAttempt.started_at.desc()).offset(skip).limit(limit)
+        )
         result = await db.execute(query)
         items = list(result.scalars().all())
 

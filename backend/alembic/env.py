@@ -18,7 +18,7 @@ if config.config_file_name is not None:
 
 from app.core.config import settings
 import app.models  # Ensure all model tables are registered
-from app.models.base import Base
+from app.core.database import Base
 
 # Model metadata for autogenerate support
 target_metadata = Base.metadata

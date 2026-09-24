@@ -1,13 +1,16 @@
 """
 Career Roadmap and Step Progression Pydantic v2 Schemas.
 """
+
 from datetime import datetime
 from typing import List, Optional
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
 class RoadmapStepResponse(BaseModel):
     """Step node within a career learning path."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -31,6 +34,7 @@ class RoadmapStepResponse(BaseModel):
 
 class RoadmapSummaryResponse(BaseModel):
     """Catalog summary of a career roadmap."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -51,11 +55,13 @@ class RoadmapSummaryResponse(BaseModel):
 
 class RoadmapDetailResponse(RoadmapSummaryResponse):
     """Full detail view of roadmap with ordered pipeline steps."""
+
     pass
 
 
 class RoadmapListResponse(BaseModel):
     """Paginated roadmaps catalog."""
+
     items: List[RoadmapSummaryResponse]
     total: int
     page: int
@@ -65,6 +71,7 @@ class RoadmapListResponse(BaseModel):
 
 class UserRoadmapProgressResponse(BaseModel):
     """Active user roadmap enrollment and step advancement tracking."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str

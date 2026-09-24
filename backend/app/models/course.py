@@ -7,29 +7,35 @@ Why these entities exist:
 3. LessonResource: Attached artifacts (GitHub repos, RFCs, manifests) for deep hands-on learning.
 4. CourseEnrollment: Tracks student enrollment status (active, completed, cancelled) with uniqueness enforcement.
 """
+
 import enum
 import uuid
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
+
+if TYPE_CHECKING:
+    from app.models.skill import Skill
+
 from sqlalchemy import (
+    JSON,
     Boolean,
     DateTime,
-    Enum as SQLEnum,
     Float,
     ForeignKey,
     Integer,
-    JSON,
     String,
     Text,
     UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.base import Base, TimestampMixin
+from app.core.database import Base
+from app.models.base import TimestampMixin
 
 
 class CourseCategory(str, enum.Enum):
     """CloudForge Curriculum Domain Categories."""
+
     CLOUD = "Cloud"
     DEVOPS = "DevOps"
     DEVSECOPS = "DevSecOps"
@@ -42,6 +48,7 @@ class CourseCategory(str, enum.Enum):
 
 class CourseDifficulty(str, enum.Enum):
     """Curriculum Experience Levels."""
+
     BEGINNER = "Beginner"
     INTERMEDIATE = "Intermediate"
     ADVANCED = "Advanced"
@@ -50,6 +57,7 @@ class CourseDifficulty(str, enum.Enum):
 
 class EnrollmentStatus(str, enum.Enum):
     """Student Enrollment Status."""
+
     ACTIVE = "active"
     COMPLETED = "completed"
     CANCELLED = "cancelled"
@@ -57,6 +65,7 @@ class EnrollmentStatus(str, enum.Enum):
 
 class Course(Base, TimestampMixin):
     """Root Course entity."""
+
     __tablename__ = "courses"
 
     id: Mapped[str] = mapped_column(
@@ -141,7 +150,9 @@ class Course(Base, TimestampMixin):
     instructor_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     instructor_role: Mapped[Optional[str]] = mapped_column(String(150), nullable=True)
     instructor_avatar: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
-    instructor_verified: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    instructor_verified: Mapped[bool] = mapped_column(
+        Boolean, default=True, nullable=False
+    )
 
     # Relationships
     modules: Mapped[List["CourseModule"]] = relationship(
@@ -166,6 +177,7 @@ class Course(Base, TimestampMixin):
 
 class CourseModule(Base, TimestampMixin):
     """Course syllabus module grouping lessons."""
+
     __tablename__ = "course_modules"
 
     id: Mapped[str] = mapped_column(
@@ -221,6 +233,7 @@ class CourseModule(Base, TimestampMixin):
 
 class Lesson(Base, TimestampMixin):
     """Individual learning unit (theory, hands-on, quiz)."""
+
     __tablename__ = "lessons"
 
     id: Mapped[str] = mapped_column(
@@ -295,6 +308,7 @@ class Lesson(Base, TimestampMixin):
 
 class LessonResource(Base, TimestampMixin):
     """External links, GitHub repos, manifests, and reference material."""
+
     __tablename__ = "lesson_resources"
 
     id: Mapped[str] = mapped_column(
@@ -341,6 +355,7 @@ class LessonResource(Base, TimestampMixin):
 
 class CourseEnrollment(Base, TimestampMixin):
     """Student course enrollment record."""
+
     __tablename__ = "course_enrollments"
     __table_args__ = (
         UniqueConstraint("user_id", "course_id", name="uq_user_course_enrollment"),

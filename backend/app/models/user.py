@@ -11,18 +11,23 @@ Why these models exist:
    Allows individual or blanket token revocation upon logout, preventing replay attacks
    with long-lived tokens.
 """
+
 import enum
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
-from sqlalchemy import Boolean, DateTime, Enum as SQLEnum, ForeignKey, Integer, String
+
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String
+from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.base import Base, TimestampMixin
+from app.core.database import Base
+from app.models.base import TimestampMixin
 
 
 class UserRole(str, enum.Enum):
     """Supported authorization roles across CloudForge."""
+
     STUDENT = "student"
     INSTRUCTOR = "instructor"
     ADMIN = "admin"
@@ -30,6 +35,7 @@ class UserRole(str, enum.Enum):
 
 class User(Base, TimestampMixin):
     """User account and profile model."""
+
     __tablename__ = "users"
 
     id: Mapped[str] = mapped_column(
@@ -105,6 +111,7 @@ class User(Base, TimestampMixin):
 
 class RefreshToken(Base, TimestampMixin):
     """Active and revoked refresh token records for JWT session invalidation."""
+
     __tablename__ = "refresh_tokens"
 
     id: Mapped[str] = mapped_column(

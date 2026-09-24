@@ -14,25 +14,22 @@ Why this architecture exists:
    - Level 4 (71-90%): Advanced
    - Level 5 (91-100%): Expert
 """
-from datetime import datetime, timezone
-from typing import List, Optional
-from fastapi import HTTPException, status
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
-from app.core.logging import logger
-from app.models.course import Course, CourseEnrollment, CourseModule, EnrollmentStatus, Lesson
-from app.models.progress import LessonProgress, LessonProgressStatus
+from typing import List, Optional
+
+from fastapi import HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.course import (
+    EnrollmentStatus,
+)
+from app.models.progress import LessonProgressStatus
 from app.models.skill import (
-    CourseSkill,
     LEVEL_NAMES,
     Skill,
     SkillLevel,
-    UserSkill,
-    get_level_from_percentage,
 )
-from app.repositories.course_repo import course_repo, enrollment_repo
+from app.repositories.course_repo import enrollment_repo
 from app.repositories.progress_repo import progress_repo
 from app.repositories.skill_repo import skill_repo
 from app.schemas.skill import (
@@ -51,7 +48,7 @@ class SkillService:
         db: AsyncSession,
         *,
         category: Optional[str] = None,
-        search: Optional[str] = None
+        search: Optional[str] = None,
     ) -> List[SkillSummaryResponse]:
         """Fetch all skills in the catalog."""
         skills = await skill_repo.get_all(db, category=category, search=search)
@@ -63,7 +60,7 @@ class SkillService:
                 description=s.description,
                 category=s.category,
                 target_level=s.target_level,
-                target_level_name=LEVEL_NAMES.get(s.target_level, "Advanced"),
+                target_level_name=LEVEL_NAMES.get(SkillLevel(s.target_level), "Advanced"),
                 trend=s.trend or "+5%",
                 courses_count=len(s.courses or []),
                 related_courses=[
@@ -75,12 +72,7 @@ class SkillService:
             for s in skills
         ]
 
-    async def get_skill(
-        self,
-        db: AsyncSession,
-        *,
-        identifier: str
-    ) -> Skill:
+    async def get_skill(self, db: AsyncSession, *, identifier: str) -> Skill:
         """Fetch skill entity by UUID or slug."""
         skill = await skill_repo.get_by_id_or_slug(db, identifier=identifier)
         if not skill:
@@ -91,11 +83,7 @@ class SkillService:
         return skill
 
     async def calculate_user_skill(
-        self,
-        db: AsyncSession,
-        *,
-        user_id: str,
-        skill: Skill
+        self, db: AsyncSession, *, user_id: str, skill: Skill
     ) -> UserSkillResponse:
         """
         Calculate deterministic skill proficiency for a student from course and lesson progress.
@@ -116,16 +104,24 @@ class SkillService:
         if related_course_ids:
             for c_id in related_course_ids:
                 # Lessons completed in this course
-                progs = await progress_repo.get_course_lesson_progress(db, user_id=user_id, course_id=c_id)
-                completed_lessons_count += sum(1 for p in progs if p.status == LessonProgressStatus.COMPLETED.value)
+                progs = await progress_repo.get_course_lesson_progress(
+                    db, user_id=user_id, course_id=c_id
+                )
+                completed_lessons_count += sum(
+                    1 for p in progs if p.status == LessonProgressStatus.COMPLETED.value
+                )
 
                 # Enrollment status
-                enr = await enrollment_repo.get_by_user_and_course(db, user_id=user_id, course_id=c_id)
+                enr = await enrollment_repo.get_by_user_and_course(
+                    db, user_id=user_id, course_id=c_id
+                )
                 if enr and enr.status == EnrollmentStatus.COMPLETED.value:
                     completed_courses_count += 1
 
         # Calculate score: 5% per lesson completed + 25% per full course finished
-        computed_score = (completed_lessons_count * 5.0) + (completed_courses_count * 25.0)
+        computed_score = (completed_lessons_count * 5.0) + (
+            completed_courses_count * 25.0
+        )
         proficiency = min(100.0, max(0.0, round(computed_score, 1)))
 
         # Update or create user skill record
@@ -160,11 +156,7 @@ class SkillService:
         )
 
     async def get_user_skill_matrix(
-        self,
-        db: AsyncSession,
-        *,
-        user_id: str,
-        category: Optional[str] = None
+        self, db: AsyncSession, *, user_id: str, category: Optional[str] = None
     ) -> UserSkillMatrixResponse:
         """Calculate and return full competency matrix for student."""
         all_skills = await skill_repo.get_all(db, category=category)
@@ -175,8 +167,13 @@ class SkillService:
             user_skill_responses.append(resp)
 
         avg_prof = (
-            round(sum(s.proficiency_percentage for s in user_skill_responses) / len(user_skill_responses), 1)
-            if user_skill_responses else 0.0
+            round(
+                sum(s.proficiency_percentage for s in user_skill_responses)
+                / len(user_skill_responses),
+                1,
+            )
+            if user_skill_responses
+            else 0.0
         )
 
         return UserSkillMatrixResponse(
@@ -186,11 +183,7 @@ class SkillService:
         )
 
     async def get_user_skill_detail(
-        self,
-        db: AsyncSession,
-        *,
-        user_id: str,
-        identifier: str
+        self, db: AsyncSession, *, user_id: str, identifier: str
     ) -> UserSkillResponse:
         """Fetch computed user skill for single competency."""
         skill = await self.get_skill(db, identifier=identifier)

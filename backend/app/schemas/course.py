@@ -1,15 +1,16 @@
 """
 Course, Module, Lesson, Resource, and Enrollment Pydantic Schemas.
 """
+
 from datetime import datetime
 from typing import List, Optional
-from pydantic import BaseModel, ConfigDict, Field
 
-from app.models.course import CourseCategory, CourseDifficulty, EnrollmentStatus
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class InstructorSchema(BaseModel):
     """Course instructor details."""
+
     model_config = ConfigDict(from_attributes=True)
 
     name: Optional[str] = None
@@ -20,6 +21,7 @@ class InstructorSchema(BaseModel):
 
 class LessonResourceResponse(BaseModel):
     """Resource attached to a lesson."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -33,6 +35,7 @@ class LessonResourceResponse(BaseModel):
 
 class LessonSummaryResponse(BaseModel):
     """Lightweight lesson representation for curriculum tree."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -46,6 +49,7 @@ class LessonSummaryResponse(BaseModel):
 
 class LessonDetailResponse(BaseModel):
     """Complete lesson payload with markdown content and resources."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -66,6 +70,7 @@ class LessonDetailResponse(BaseModel):
 
 class ModuleSummaryResponse(BaseModel):
     """Module summary with embedded ordered lessons."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -81,6 +86,7 @@ class ModuleSummaryResponse(BaseModel):
 
 class ModuleDetailResponse(BaseModel):
     """Module detail with full lesson list."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -95,6 +101,7 @@ class ModuleDetailResponse(BaseModel):
 
 class CourseSummaryResponse(BaseModel):
     """Course catalog card and list schema."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -122,12 +129,14 @@ class CourseSummaryResponse(BaseModel):
 
 class CourseDetailResponse(CourseSummaryResponse):
     """Complete course detail including curriculum syllabus."""
+
     long_description: Optional[str] = None
     modules: List[ModuleSummaryResponse] = Field(default_factory=list)
 
 
 class CourseListResponse(BaseModel):
     """Paginated course list payload."""
+
     items: List[CourseSummaryResponse]
     total: int
     page: int
@@ -137,6 +146,7 @@ class CourseListResponse(BaseModel):
 
 class CourseCurriculumResponse(BaseModel):
     """Course Curriculum tree."""
+
     model_config = ConfigDict(from_attributes=True)
 
     course_id: str
@@ -147,6 +157,7 @@ class CourseCurriculumResponse(BaseModel):
 
 class CourseEnrollmentResponse(BaseModel):
     """Student course enrollment record."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str

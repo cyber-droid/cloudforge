@@ -1,7 +1,9 @@
 """
 Career Learning Roadmaps and Pipeline Progression Endpoints.
 """
+
 from typing import List, Optional
+
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,14 +26,16 @@ router = APIRouter()
     response_model=RoadmapListResponse,
     status_code=status.HTTP_200_OK,
     summary="List Career Roadmaps",
-    description="Fetch paginated career roadmaps catalog. Includes real user progress if authenticated."
+    description="Fetch paginated career roadmaps catalog. Includes real user progress if authenticated.",
 )
 async def list_roadmaps(
     page: int = Query(default=1, ge=1, description="Page number"),
     page_size: int = Query(default=10, ge=1, le=50, description="Items per page"),
     category: Optional[str] = Query(default=None, description="Filter by category"),
     difficulty: Optional[str] = Query(default=None, description="Filter by difficulty"),
-    search: Optional[str] = Query(default=None, description="Search roadmaps by title or description"),
+    search: Optional[str] = Query(
+        default=None, description="Search roadmaps by title or description"
+    ),
     current_user: Optional[User] = Depends(get_optional_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> RoadmapListResponse:
@@ -52,7 +56,7 @@ async def list_roadmaps(
     response_model=RoadmapDetailResponse,
     status_code=status.HTTP_200_OK,
     summary="Get Career Roadmap Details",
-    description="Fetch full roadmap specification with ordered milestones and live step statuses."
+    description="Fetch full roadmap specification with ordered milestones and live step statuses.",
 )
 async def get_roadmap(
     roadmap_id: str,
@@ -72,7 +76,7 @@ async def get_roadmap(
     response_model=List[RoadmapStepResponse],
     status_code=status.HTTP_200_OK,
     summary="Get Roadmap Steps",
-    description="Fetch ordered pipeline steps for a specific career roadmap."
+    description="Fetch ordered pipeline steps for a specific career roadmap.",
 )
 async def get_roadmap_steps(
     roadmap_id: str,
@@ -92,7 +96,7 @@ async def get_roadmap_steps(
     response_model=UserRoadmapProgressResponse,
     status_code=status.HTTP_200_OK,
     summary="Start Career Roadmap",
-    description="Enroll current student in a career roadmap with duplicate prevention."
+    description="Enroll current student in a career roadmap with duplicate prevention.",
 )
 async def start_roadmap(
     roadmap_id: str,

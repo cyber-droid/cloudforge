@@ -10,29 +10,36 @@ Why these entities exist:
 5. ProjectStepProgress: Tracks granular step progress per user with derived project completion.
 6. ProjectCourse & ProjectSkill: Many-to-Many associations connecting projects to curriculum courses and skill competencies.
 """
+
 import enum
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, List, Optional
+
+if TYPE_CHECKING:
+    from app.models.course import Course
+    from app.models.skill import Skill
+    from app.models.user import User
+
 from sqlalchemy import (
+    JSON,
     Boolean,
     DateTime,
-    Enum as SQLEnum,
     ForeignKey,
     Integer,
-    JSON,
     String,
-    Table,
     Text,
     UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.base import Base, TimestampMixin
+from app.core.database import Base
+from app.models.base import TimestampMixin
 
 
 class ProjectDifficulty(str, enum.Enum):
     """Standardized project difficulty levels."""
+
     BEGINNER = "Beginner"
     INTERMEDIATE = "Intermediate"
     ADVANCED = "Advanced"
@@ -40,6 +47,7 @@ class ProjectDifficulty(str, enum.Enum):
 
 class ProjectStatus(str, enum.Enum):
     """Lifecycle status for project discovery."""
+
     DRAFT = "draft"
     PUBLISHED = "published"
     ARCHIVED = "archived"
@@ -47,6 +55,7 @@ class ProjectStatus(str, enum.Enum):
 
 class StepType(str, enum.Enum):
     """DevOps engineering workflow phase types."""
+
     LEARN = "learn"
     BUILD = "build"
     CONFIGURE = "configure"
@@ -60,6 +69,7 @@ class StepType(str, enum.Enum):
 
 class ProjectEnrollmentStatus(str, enum.Enum):
     """User project progress status."""
+
     NOT_STARTED = "not_started"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
@@ -67,6 +77,7 @@ class ProjectEnrollmentStatus(str, enum.Enum):
 
 class StepProgressStatus(str, enum.Enum):
     """Status of an individual project step for a user."""
+
     NOT_STARTED = "not_started"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
@@ -74,6 +85,7 @@ class StepProgressStatus(str, enum.Enum):
 
 class ProjectResourceType(str, enum.Enum):
     """Types of supplementary engineering resources."""
+
     DOCUMENTATION = "documentation"
     REPOSITORY = "repository"
     DIAGRAM = "diagram"
@@ -84,6 +96,7 @@ class ProjectResourceType(str, enum.Enum):
 
 class ProjectCourse(Base):
     """Many-to-Many association between Projects and Courses."""
+
     __tablename__ = "project_courses"
 
     project_id: Mapped[str] = mapped_column(
@@ -100,6 +113,7 @@ class ProjectCourse(Base):
 
 class ProjectSkill(Base):
     """Many-to-Many association between Projects and Skills."""
+
     __tablename__ = "project_skills"
 
     project_id: Mapped[str] = mapped_column(
@@ -116,6 +130,7 @@ class ProjectSkill(Base):
 
 class Project(Base, TimestampMixin):
     """Hands-on CloudForge DevOps & Cloud engineering project."""
+
     __tablename__ = "projects"
 
     id: Mapped[str] = mapped_column(
@@ -232,6 +247,7 @@ class Project(Base, TimestampMixin):
 
 class ProjectStep(Base, TimestampMixin):
     """Sequential engineering milestone within a project."""
+
     __tablename__ = "project_steps"
     __table_args__ = (
         UniqueConstraint("project_id", "step_order", name="uq_project_step_order"),
@@ -293,6 +309,7 @@ class ProjectStep(Base, TimestampMixin):
 
 class ProjectResource(Base, TimestampMixin):
     """Supplementary engineering assets, repositories, and diagrams."""
+
     __tablename__ = "project_resources"
 
     id: Mapped[str] = mapped_column(
@@ -339,6 +356,7 @@ class ProjectResource(Base, TimestampMixin):
 
 class UserProjectEnrollment(Base, TimestampMixin):
     """Tracks a user's enrollment and progress state in a project."""
+
     __tablename__ = "user_project_enrollments"
     __table_args__ = (
         UniqueConstraint("user_id", "project_id", name="uq_user_project_enrollment"),
@@ -398,9 +416,12 @@ class UserProjectEnrollment(Base, TimestampMixin):
 
 class ProjectStepProgress(Base, TimestampMixin):
     """User completion records for individual project steps."""
+
     __tablename__ = "project_step_progress"
     __table_args__ = (
-        UniqueConstraint("user_id", "project_step_id", name="uq_user_project_step_progress"),
+        UniqueConstraint(
+            "user_id", "project_step_id", name="uq_user_project_step_progress"
+        ),
     )
 
     id: Mapped[str] = mapped_column(

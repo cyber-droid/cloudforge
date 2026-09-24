@@ -15,13 +15,16 @@ Why this exists:
    guaranteeing each request operates in its own transaction context and automatically
    rolls back if an unhandled exception occurs.
 """
+
 from typing import AsyncGenerator
+
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
 from sqlalchemy.orm import DeclarativeBase
+
 from app.core.config import settings
 from app.core.logging import logger
 
@@ -30,8 +33,8 @@ engine = create_async_engine(
     settings.DATABASE_URL,
     echo=settings.DEBUG,
     future=True,
-    pool_pre_ping=True,                     # Verifies connection liveness before checking out
-    pool_size=settings.DB_POOL_SIZE,        # Base pool connection count
+    pool_pre_ping=True,  # Verifies connection liveness before checking out
+    pool_size=settings.DB_POOL_SIZE,  # Base pool connection count
     max_overflow=settings.DB_MAX_OVERFLOW,  # Burst connection allowance
     pool_timeout=settings.DB_POOL_TIMEOUT,  # Max wait time for available connection
 )
@@ -52,13 +55,14 @@ class Base(DeclarativeBase):
     Base declarative class for all SQLAlchemy 2.0 models.
     Provides metadata registry for Alembic migration autogeneration.
     """
+
     pass
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
     FastAPI dependency that yields an asynchronous SQLAlchemy session per request.
-    
+
     Guarantees:
     - Dedicated session per HTTP request
     - Automatic rollback on unhandled exceptions

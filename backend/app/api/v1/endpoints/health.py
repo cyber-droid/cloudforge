@@ -10,6 +10,7 @@ Why these exist:
    Verifies that the application's underlying dependencies (PostgreSQL async engine) are operational
    before routing user traffic to the pod or service instance.
 """
+
 from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,7 +29,7 @@ router = APIRouter()
     status_code=status.HTTP_200_OK,
     summary="Application Health / Liveness Check",
     description="Returns the immediate liveness status of the FastAPI backend application process.",
-    tags=["System Diagnostics"]
+    tags=["System Diagnostics"],
 )
 @router.get(
     "/livez",
@@ -56,9 +57,12 @@ async def health_check() -> HealthResponse:
     description="Verifies that the PostgreSQL database connection pool is active and responding to queries.",
     responses={
         200: {"description": "Service and database are healthy and ready."},
-        503: {"description": "Service is unhealthy or database is unreachable.", "model": ReadinessResponse},
+        503: {
+            "description": "Service is unhealthy or database is unreachable.",
+            "model": ReadinessResponse,
+        },
     },
-    tags=["System Diagnostics"]
+    tags=["System Diagnostics"],
 )
 @router.get(
     "/healthz",
@@ -67,8 +71,7 @@ async def health_check() -> HealthResponse:
     include_in_schema=False,
 )
 async def readiness_check(
-    response: Response,
-    db: AsyncSession = Depends(get_db)
+    response: Response, db: AsyncSession = Depends(get_db)
 ) -> ReadinessResponse:
     """
     Readiness probe with live database ping.
@@ -80,7 +83,7 @@ async def readiness_check(
             status="ready",
             environment=settings.ENVIRONMENT,
             version="0.1.0",
-            database="connected"
+            database="connected",
         )
     except Exception as exc:
         logger.error(f"Readiness probe database check failed: {exc}", exc_info=True)
@@ -89,5 +92,5 @@ async def readiness_check(
             status="unhealthy",
             environment=settings.ENVIRONMENT,
             version="0.1.0",
-            database=f"error: {str(exc)}"
+            database=f"error: {str(exc)}",
         )

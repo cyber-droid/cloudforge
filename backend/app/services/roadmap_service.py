@@ -11,17 +11,21 @@ Why this architecture exists:
    - Skill Steps: Completed when the student achieves foundational/intermediate proficiency (>=40%) in the skill.
    - Milestone Steps: Capstone integration stages awaiting subsequent practical project modules.
 """
+
 from math import ceil
 from typing import List, Optional, Tuple
+
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.logging import logger
-from app.models.course import Course, CourseEnrollment, EnrollmentStatus
+from app.models.course import EnrollmentStatus
 from app.models.progress import LessonProgressStatus
-from app.models.roadmap import Roadmap, RoadmapStatus, RoadmapStep, RoadmapStepType, UserRoadmapProgress
-from app.models.skill import Skill
-from app.repositories.course_repo import course_repo, enrollment_repo
+from app.models.roadmap import (
+    Roadmap,
+    RoadmapStep,
+    RoadmapStepType,
+)
+from app.repositories.course_repo import enrollment_repo
 from app.repositories.progress_repo import progress_repo
 from app.repositories.roadmap_repo import roadmap_repo
 from app.repositories.skill_repo import skill_repo
@@ -39,11 +43,7 @@ class RoadmapService:
     """Service handling career learning roadmaps, step evaluations, and user enrollments."""
 
     async def _evaluate_step_status(
-        self,
-        db: AsyncSession,
-        *,
-        step: RoadmapStep,
-        user_id: Optional[str] = None
+        self, db: AsyncSession, *, step: RoadmapStep, user_id: Optional[str] = None
     ) -> Tuple[str, bool]:
         """
         Evaluate live completion status for a roadmap step for an authenticated student.
@@ -54,13 +54,21 @@ class RoadmapService:
 
         if step.step_type == RoadmapStepType.COURSE.value and step.course_id:
             # Check enrollment and lesson progress
-            enrollment = await enrollment_repo.get_by_user_and_course(db, user_id=user_id, course_id=step.course_id)
+            enrollment = await enrollment_repo.get_by_user_and_course(
+                db, user_id=user_id, course_id=step.course_id
+            )
             if enrollment and enrollment.status == EnrollmentStatus.COMPLETED.value:
                 return "completed", True
 
-            progs = await progress_repo.get_course_lesson_progress(db, user_id=user_id, course_id=step.course_id)
-            completed_count = sum(1 for p in progs if p.status == LessonProgressStatus.COMPLETED.value)
-            in_prog_count = sum(1 for p in progs if p.status == LessonProgressStatus.IN_PROGRESS.value)
+            progs = await progress_repo.get_course_lesson_progress(
+                db, user_id=user_id, course_id=step.course_id
+            )
+            completed_count = sum(
+                1 for p in progs if p.status == LessonProgressStatus.COMPLETED.value
+            )
+            in_prog_count = sum(
+                1 for p in progs if p.status == LessonProgressStatus.IN_PROGRESS.value
+            )
 
             if enrollment or completed_count > 0 or in_prog_count > 0:
                 return "in-progress", False
@@ -69,7 +77,9 @@ class RoadmapService:
         elif step.step_type == RoadmapStepType.SKILL.value and step.skill_id:
             skill = await skill_repo.get_by_id_or_slug(db, identifier=step.skill_id)
             if skill:
-                user_skill = await skill_service.calculate_user_skill(db, user_id=user_id, skill=skill)
+                user_skill = await skill_service.calculate_user_skill(
+                    db, user_id=user_id, skill=skill
+                )
                 if user_skill.proficiency_percentage >= 40.0:
                     return "completed", True
                 elif user_skill.proficiency_percentage > 0:
@@ -80,10 +90,7 @@ class RoadmapService:
         return "upcoming", False
 
     async def _to_roadmap_summary(
-        self,
-        db: AsyncSession,
-        roadmap: Roadmap,
-        user_id: Optional[str] = None
+        self, db: AsyncSession, roadmap: Roadmap, user_id: Optional[str] = None
     ) -> RoadmapSummaryResponse:
         """Helper to transform Roadmap ORM model into summary schema with computed step nodes and progress."""
         steps = roadmap.steps or []
@@ -92,7 +99,9 @@ class RoadmapService:
         total_required = 0
 
         for s in steps:
-            status_label, is_completed = await self._evaluate_step_status(db, step=s, user_id=user_id)
+            status_label, is_completed = await self._evaluate_step_status(
+                db, step=s, user_id=user_id
+            )
 
             if s.required:
                 total_required += 1
@@ -123,7 +132,8 @@ class RoadmapService:
 
         progress_pct = (
             round((completed_required / total_required * 100), 1)
-            if total_required > 0 else 0.0
+            if total_required > 0
+            else 0.0
         )
 
         return RoadmapSummaryResponse(
@@ -166,8 +176,7 @@ class RoadmapService:
         )
 
         items = [
-            await self._to_roadmap_summary(db, r, user_id=user_id)
-            for r in roadmaps
+            await self._to_roadmap_summary(db, r, user_id=user_id) for r in roadmaps
         ]
         total_pages = ceil(total / page_size) if total > 0 else 1
 
@@ -180,11 +189,7 @@ class RoadmapService:
         )
 
     async def get_roadmap(
-        self,
-        db: AsyncSession,
-        *,
-        identifier: str,
-        user_id: Optional[str] = None
+        self, db: AsyncSession, *, identifier: str, user_id: Optional[str] = None
     ) -> RoadmapDetailResponse:
         """Fetch full roadmap detail by UUID or slug."""
         roadmap = await roadmap_repo.get_by_id_or_slug(db, identifier=identifier)
@@ -202,28 +207,30 @@ class RoadmapService:
         db: AsyncSession,
         *,
         roadmap_identifier: str,
-        user_id: Optional[str] = None
+        user_id: Optional[str] = None,
     ) -> List[RoadmapStepResponse]:
         """Fetch ordered steps for a roadmap."""
-        detail = await self.get_roadmap(db, identifier=roadmap_identifier, user_id=user_id)
+        detail = await self.get_roadmap(
+            db, identifier=roadmap_identifier, user_id=user_id
+        )
         return detail.nodes
 
     async def start_roadmap(
-        self,
-        db: AsyncSession,
-        *,
-        user_id: str,
-        roadmap_identifier: str
+        self, db: AsyncSession, *, user_id: str, roadmap_identifier: str
     ) -> UserRoadmapProgressResponse:
         """Start a career roadmap for the authenticated user."""
-        roadmap = await roadmap_repo.get_by_id_or_slug(db, identifier=roadmap_identifier)
+        roadmap = await roadmap_repo.get_by_id_or_slug(
+            db, identifier=roadmap_identifier
+        )
         if not roadmap:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Roadmap '{roadmap_identifier}' not found.",
             )
 
-        progress_record = await roadmap_repo.start_roadmap(db, user_id=user_id, roadmap_id=roadmap.id)
+        progress_record = await roadmap_repo.start_roadmap(
+            db, user_id=user_id, roadmap_id=roadmap.id
+        )
         summary = await self._to_roadmap_summary(db, roadmap, user_id=user_id)
 
         required_nodes = [n for n in summary.nodes if n.required]
@@ -244,10 +251,7 @@ class RoadmapService:
         )
 
     async def get_user_roadmaps(
-        self,
-        db: AsyncSession,
-        *,
-        user_id: str
+        self, db: AsyncSession, *, user_id: str
     ) -> List[UserRoadmapProgressResponse]:
         """Fetch all roadmaps started by the student."""
         progress_records = await roadmap_repo.get_user_roadmaps(db, user_id=user_id)
@@ -278,24 +282,26 @@ class RoadmapService:
         return results
 
     async def get_user_roadmap_progress(
-        self,
-        db: AsyncSession,
-        *,
-        user_id: str,
-        roadmap_identifier: str
+        self, db: AsyncSession, *, user_id: str, roadmap_identifier: str
     ) -> UserRoadmapProgressResponse:
         """Fetch single user roadmap progress."""
-        roadmap = await roadmap_repo.get_by_id_or_slug(db, identifier=roadmap_identifier)
+        roadmap = await roadmap_repo.get_by_id_or_slug(
+            db, identifier=roadmap_identifier
+        )
         if not roadmap:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Roadmap '{roadmap_identifier}' not found.",
             )
 
-        progress_record = await roadmap_repo.get_user_roadmap(db, user_id=user_id, roadmap_id=roadmap.id)
+        progress_record = await roadmap_repo.get_user_roadmap(
+            db, user_id=user_id, roadmap_id=roadmap.id
+        )
         if not progress_record:
             # Auto-start if querying own progress
-            progress_record = await roadmap_repo.start_roadmap(db, user_id=user_id, roadmap_id=roadmap.id)
+            progress_record = await roadmap_repo.start_roadmap(
+                db, user_id=user_id, roadmap_id=roadmap.id
+            )
 
         summary = await self._to_roadmap_summary(db, roadmap, user_id=user_id)
         required_nodes = [n for n in summary.nodes if n.required]

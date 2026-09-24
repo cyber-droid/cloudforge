@@ -1,8 +1,10 @@
 """
 Roadmap and Step Progression Repository Layer.
 """
+
 from datetime import datetime, timezone
 from typing import List, Optional, Tuple
+
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -56,10 +58,7 @@ class RoadmapRepository:
         return list(result.scalars().all()), total
 
     async def get_by_id_or_slug(
-        self,
-        db: AsyncSession,
-        *,
-        identifier: str
+        self, db: AsyncSession, *, identifier: str
     ) -> Optional[Roadmap]:
         """Fetch single roadmap by UUID or slug with steps and connected relations."""
         query = (
@@ -74,10 +73,7 @@ class RoadmapRepository:
         return result.scalars().first()
 
     async def get_steps_for_roadmap(
-        self,
-        db: AsyncSession,
-        *,
-        roadmap_id: str
+        self, db: AsyncSession, *, roadmap_id: str
     ) -> List[RoadmapStep]:
         """Fetch ordered step nodes for a roadmap."""
         query = (
@@ -93,11 +89,7 @@ class RoadmapRepository:
         return list(result.scalars().all())
 
     async def get_user_roadmap(
-        self,
-        db: AsyncSession,
-        *,
-        user_id: str,
-        roadmap_id: str
+        self, db: AsyncSession, *, user_id: str, roadmap_id: str
     ) -> Optional[UserRoadmapProgress]:
         """Fetch single user roadmap enrollment record."""
         query = (
@@ -119,10 +111,7 @@ class RoadmapRepository:
         return result.scalars().first()
 
     async def get_user_roadmaps(
-        self,
-        db: AsyncSession,
-        *,
-        user_id: str
+        self, db: AsyncSession, *, user_id: str
     ) -> List[UserRoadmapProgress]:
         """Fetch all roadmaps started by a student."""
         query = (
@@ -142,11 +131,7 @@ class RoadmapRepository:
         return list(result.scalars().all())
 
     async def start_roadmap(
-        self,
-        db: AsyncSession,
-        *,
-        user_id: str,
-        roadmap_id: str
+        self, db: AsyncSession, *, user_id: str, roadmap_id: str
     ) -> UserRoadmapProgress:
         """Enroll user in a career roadmap with duplicate prevention."""
         now = datetime.now(timezone.utc)

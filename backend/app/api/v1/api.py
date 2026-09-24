@@ -3,7 +3,9 @@ Aggregated API v1 Router.
 
 Combines all sub-routers for CloudForge endpoints.
 """
+
 from fastapi import APIRouter
+
 from app.api.v1.endpoints import (
     auth,
     certificates,
@@ -34,25 +36,37 @@ api_router.include_router(users.router, prefix="/users", tags=["Users & Progress
 api_router.include_router(courses.router, prefix="/courses", tags=["Courses"])
 
 # Lessons & Study Progress
-api_router.include_router(lessons.router, prefix="/lessons", tags=["Lessons & Progress"])
+api_router.include_router(
+    lessons.router, prefix="/lessons", tags=["Lessons & Progress"]
+)
 
 # Technical Skills & Competency Matrix
-api_router.include_router(skills.router, prefix="/skills", tags=["Skills & Competencies"])
+api_router.include_router(
+    skills.router, prefix="/skills", tags=["Skills & Competencies"]
+)
 
 # Career Learning Roadmaps
 api_router.include_router(roadmaps.router, prefix="/roadmaps", tags=["Career Roadmaps"])
 
 # Certifications & Exam Preparation
-api_router.include_router(certifications.router, prefix="/certifications", tags=["Certifications"])
+api_router.include_router(
+    certifications.router, prefix="/certifications", tags=["Certifications"]
+)
 
 # Certification Training Tracks
-api_router.include_router(trainings.router, prefix="/trainings", tags=["Certification Training"])
+api_router.include_router(
+    trainings.router, prefix="/trainings", tags=["Certification Training"]
+)
 
 # Practice Quizzes & Timed Mock Exams
 api_router.include_router(practice.router, tags=["Practice Exams & Quizzes"])
 
 # CloudForge Certificates & Public Verification
-api_router.include_router(certificates.router, prefix="/certificates", tags=["Certificates"])
+api_router.include_router(
+    certificates.router, prefix="/certificates", tags=["Certificates"]
+)
 
 # Engineering Projects & DevOps Workflows
-api_router.include_router(projects.router, prefix="/projects", tags=["Engineering Projects"])
+api_router.include_router(
+    projects.router, prefix="/projects", tags=["Engineering Projects"]
+)

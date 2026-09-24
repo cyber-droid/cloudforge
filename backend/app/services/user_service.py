@@ -3,7 +3,7 @@ User Management Service Module.
 
 Handles user profile updates, preference synchronization, and role checks.
 """
-from typing import Optional
+
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,19 +27,19 @@ class UserService:
         return user
 
     async def update_profile(
-        self,
-        db: AsyncSession,
-        *,
-        current_user: User,
-        data: UserUpdate
+        self, db: AsyncSession, *, current_user: User, data: UserUpdate
     ) -> UserResponse:
         """Update current user profile and terminal/notification preferences."""
         update_dict = data.model_dump(exclude_unset=True)
         if not update_dict:
             return UserResponse.model_validate(current_user)
 
-        updated_user = await user_repo.update(db, db_obj=current_user, obj_in=update_dict)
-        logger.info(f"User profile updated: id={current_user.id}, fields={list(update_dict.keys())}")
+        updated_user = await user_repo.update(
+            db, db_obj=current_user, obj_in=update_dict
+        )
+        logger.info(
+            f"User profile updated: id={current_user.id}, fields={list(update_dict.keys())}"
+        )
         return UserResponse.model_validate(updated_user)
 
 

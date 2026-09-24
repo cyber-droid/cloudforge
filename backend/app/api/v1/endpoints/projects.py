@@ -1,7 +1,9 @@
 """
 DevOps Engineering Projects and Workflow Endpoints.
 """
+
 from typing import List, Optional
+
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -32,9 +34,15 @@ async def list_projects(
     page: int = Query(default=1, ge=1, description="Page number"),
     page_size: int = Query(default=10, ge=1, le=50, description="Items per page"),
     difficulty: Optional[str] = Query(default=None, description="Filter by difficulty"),
-    status: Optional[str] = Query(default=None, description="Filter by status (Instructors/Admins only)"),
-    featured: Optional[bool] = Query(default=None, description="Filter featured projects"),
-    search: Optional[str] = Query(default=None, description="Search by title or description"),
+    status: Optional[str] = Query(
+        default=None, description="Filter by status (Instructors/Admins only)"
+    ),
+    featured: Optional[bool] = Query(
+        default=None, description="Filter featured projects"
+    ),
+    search: Optional[str] = Query(
+        default=None, description="Search by title or description"
+    ),
     current_user: Optional[User] = Depends(get_optional_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> ProjectListResponse:

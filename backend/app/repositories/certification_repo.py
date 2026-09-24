@@ -3,8 +3,10 @@ Certification and Training Repository.
 
 Handles database queries for certification tracks, linked training curricula, and user enrollments.
 """
+
 from datetime import datetime, timezone
 from typing import List, Optional, Tuple
+
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -77,11 +79,17 @@ class CertificationRepository:
         published_only: bool = True,
     ) -> Optional[Certification]:
         """Fetch single certification by UUID or unique slug."""
-        query = select(Certification).options(
-            selectinload(Certification.trainings).selectinload(CertificationTraining.course),
-            selectinload(Certification.questions),
-        ).where(
-            (Certification.id == identifier) | (Certification.slug == identifier)
+        query = (
+            select(Certification)
+            .options(
+                selectinload(Certification.trainings).selectinload(
+                    CertificationTraining.course
+                ),
+                selectinload(Certification.questions),
+            )
+            .where(
+                (Certification.id == identifier) | (Certification.slug == identifier)
+            )
         )
 
         if published_only:
@@ -98,11 +106,16 @@ class CertificationRepository:
         published_only: bool = True,
     ) -> Optional[CertificationTraining]:
         """Fetch single training program by UUID or slug."""
-        query = select(CertificationTraining).options(
-            selectinload(CertificationTraining.certification),
-            selectinload(CertificationTraining.course),
-        ).where(
-            (CertificationTraining.id == identifier) | (CertificationTraining.slug == identifier)
+        query = (
+            select(CertificationTraining)
+            .options(
+                selectinload(CertificationTraining.certification),
+                selectinload(CertificationTraining.course),
+            )
+            .where(
+                (CertificationTraining.id == identifier)
+                | (CertificationTraining.slug == identifier)
+            )
         )
 
         if published_only:
@@ -119,14 +132,20 @@ class CertificationRepository:
         published_only: bool = True,
     ) -> List[CertificationTraining]:
         """Fetch all training programs belonging to a certification."""
-        query = select(CertificationTraining).options(
-            selectinload(CertificationTraining.course),
-        ).where(CertificationTraining.certification_id == certification_id)
+        query = (
+            select(CertificationTraining)
+            .options(
+                selectinload(CertificationTraining.course),
+            )
+            .where(CertificationTraining.certification_id == certification_id)
+        )
 
         if published_only:
             query = query.where(CertificationTraining.is_published.is_(True))
 
-        result = await db.execute(query.order_by(CertificationTraining.created_at.asc()))
+        result = await db.execute(
+            query.order_by(CertificationTraining.created_at.asc())
+        )
         return list(result.scalars().all())
 
     async def get_user_enrollment(
@@ -168,7 +187,9 @@ class CertificationRepository:
         training_id: str,
     ) -> UserCertificationEnrollment:
         """Enroll user in training track idempotently."""
-        existing = await self.get_user_enrollment(db, user_id=user_id, training_id=training_id)
+        existing = await self.get_user_enrollment(
+            db, user_id=user_id, training_id=training_id
+        )
         if existing:
             return existing
 

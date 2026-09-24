@@ -3,7 +3,9 @@ Certificate Service.
 
 Handles formative certificate issuance upon verified training completion and public verification lookups.
 """
+
 from typing import List, Optional
+
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -38,7 +40,9 @@ class CertificateService:
             training_id=training.id,
             certification_id=training.certification_id,
             recipient_name=recipient_name,
-            training_title=training.certification.training_certificate_name if training.certification else training.title,
+            training_title=training.certification.training_certificate_name
+            if training.certification
+            else training.title,
             prefix=prefix,
         )
 
@@ -112,7 +116,9 @@ class CertificateService:
         Public verification lookup.
         Strictly returns non-sensitive metadata (no email, user ID, passwords, or activity history).
         """
-        cert = await certificate_repo.get_by_verification_code(db, verification_code=verification_code)
+        cert = await certificate_repo.get_by_verification_code(
+            db, verification_code=verification_code
+        )
         if not cert:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

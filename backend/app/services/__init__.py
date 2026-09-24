@@ -1,6 +1,7 @@
 """
 Services Package - Houses domain business logic.
 """
+
 from app.services.auth_service import AuthService, auth_service
 from app.services.course_service import CourseService, course_service
 from app.services.project_service import ProjectService, project_service

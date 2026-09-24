@@ -13,12 +13,15 @@ Why this exists:
    Hashes refresh tokens prior to database storage, ensuring that even if database read access
    is compromised, raw refresh tokens cannot be used to forge authenticated sessions.
 """
-from datetime import datetime, timedelta, timezone
+
 import hashlib
-from typing import Any, Dict, Optional, Tuple, Union
 import uuid
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, Optional, Tuple, Union
+
 import jwt
 from passlib.context import CryptContext
+
 from app.core.config import settings
 
 # CryptContext configured with bcrypt scheme
@@ -45,7 +48,7 @@ def create_access_token(
     role: str = "student",
     email: Optional[str] = None,
     expires_delta: Optional[timedelta] = None,
-    extra_claims: Optional[Dict[str, Any]] = None
+    extra_claims: Optional[Dict[str, Any]] = None,
 ) -> str:
     """
     Generate an encoded JWT access token with subject, role, and expiration claims.
@@ -55,7 +58,7 @@ def create_access_token(
         expire = now + expires_delta
     else:
         expire = now + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    
+
     to_encode: Dict[str, Any] = {
         "sub": str(subject),
         "email": email,
@@ -64,7 +67,7 @@ def create_access_token(
         "iat": int(now.timestamp()),
         "exp": int(expire.timestamp()),
     }
-    
+
     if extra_claims:
         to_encode.update(extra_claims)
 
@@ -72,8 +75,7 @@ def create_access_token(
 
 
 def create_refresh_token(
-    subject: Union[str, Any],
-    expires_delta: Optional[timedelta] = None
+    subject: Union[str, Any], expires_delta: Optional[timedelta] = None
 ) -> Tuple[str, datetime]:
     """
     Generate an encoded JWT refresh token and return (raw_token, expiration_datetime).
@@ -104,9 +106,7 @@ def decode_token(token: str) -> Optional[Dict[str, Any]]:
     """
     try:
         payload = jwt.decode(
-            token,
-            settings.SECRET_KEY,
-            algorithms=[settings.ALGORITHM]
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
         )
         return payload
     except jwt.PyJWTError:

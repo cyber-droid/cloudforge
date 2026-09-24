@@ -8,7 +8,9 @@ Why this exists:
 Decouples cryptographic and token orchestration from API route handlers,
 enabling easy unit testing and reuse across multiple transport layers (REST, WebSocket, CLI).
 """
-from typing import Optional, Tuple
+
+from typing import Optional
+
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -31,7 +33,9 @@ from app.schemas.user import UserCreate, UserResponse
 class AuthService:
     """Authentication and session management business service."""
 
-    async def register(self, db: AsyncSession, *, data: RegisterRequest) -> TokenResponse:
+    async def register(
+        self, db: AsyncSession, *, data: RegisterRequest
+    ) -> TokenResponse:
         """
         Register a new user account and issue an initial authenticated session.
         Prevents duplicate email registrations.
@@ -56,11 +60,15 @@ class AuthService:
         )
 
         user = await user_repo.create_user(db, obj_in=user_create_data)
-        logger.info(f"User registered successfully: id={user.id}, role={user.role.value}")
+        logger.info(
+            f"User registered successfully: id={user.id}, role={user.role.value}"
+        )
 
         return await self._generate_session_tokens(db, user=user)
 
-    async def authenticate(self, db: AsyncSession, *, data: LoginRequest) -> TokenResponse:
+    async def authenticate(
+        self, db: AsyncSession, *, data: LoginRequest
+    ) -> TokenResponse:
         """
         Authenticate credentials and generate JWT access and refresh token pair.
         """
@@ -83,7 +91,9 @@ class AuthService:
         logger.info(f"User authenticated successfully: id={user.id}")
         return await self._generate_session_tokens(db, user=user)
 
-    async def refresh_access_token(self, db: AsyncSession, *, refresh_token_str: str) -> TokenResponse:
+    async def refresh_access_token(
+        self, db: AsyncSession, *, refresh_token_str: str
+    ) -> TokenResponse:
         """
         Validate a refresh token against the database and issue a fresh access token.
         """
@@ -99,9 +109,13 @@ class AuthService:
         token_digest = hash_token(refresh_token_str)
 
         # Check token validity and revocation state in database
-        db_token = await refresh_token_repo.get_active_by_hash(db, token_hash=token_digest)
+        db_token = await refresh_token_repo.get_active_by_hash(
+            db, token_hash=token_digest
+        )
         if not db_token:
-            logger.warning(f"Attempt to use invalid/revoked refresh token for user {user_id}")
+            logger.warning(
+                f"Attempt to use invalid/revoked refresh token for user {user_id}"
+            )
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Refresh token is invalid or has been revoked.",
@@ -130,7 +144,13 @@ class AuthService:
             user=UserResponse.model_validate(user),
         )
 
-    async def logout(self, db: AsyncSession, *, refresh_token_str: Optional[str] = None, user: Optional[User] = None) -> bool:
+    async def logout(
+        self,
+        db: AsyncSession,
+        *,
+        refresh_token_str: Optional[str] = None,
+        user: Optional[User] = None,
+    ) -> bool:
         """
         Invalidate session refresh token(s).
         """
@@ -141,7 +161,9 @@ class AuthService:
             await refresh_token_repo.revoke_all_user_tokens(db, user_id=user.id)
         return True
 
-    async def _generate_session_tokens(self, db: AsyncSession, *, user: User) -> TokenResponse:
+    async def _generate_session_tokens(
+        self, db: AsyncSession, *, user: User
+    ) -> TokenResponse:
         """Helper to create access/refresh token pair and persist hashed refresh token."""
         access_token = create_access_token(
             subject=user.id,
