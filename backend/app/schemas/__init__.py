@@ -72,6 +72,21 @@ from app.schemas.skill import (
     UserSkillMatrixResponse,
     UserSkillResponse,
 )
+from app.schemas.project import (
+    ProjectCourseReference,
+    ProjectCreate,
+    ProjectDetailResponse,
+    ProjectEnrollmentResponse,
+    ProjectListResponse,
+    ProjectProgressResponse,
+    ProjectResourceResponse,
+    ProjectSkillReference,
+    ProjectStepCompleteRequest,
+    ProjectStepProgressResponse,
+    ProjectStepResponse,
+    ProjectSummaryResponse,
+    ProjectUpdate,
+)
 from app.schemas.user import UserBase, UserCreate, UserResponse, UserUpdate
 
 __all__ = [
@@ -133,5 +148,18 @@ __all__ = [
     "QuestionReviewResponse",
     "CertificateResponse",
     "CertificateVerifyResponse",
+    "ProjectCourseReference",
+    "ProjectSkillReference",
+    "ProjectStepResponse",
+    "ProjectResourceResponse",
+    "ProjectStepProgressResponse",
+    "ProjectStepCompleteRequest",
+    "ProjectSummaryResponse",
+    "ProjectDetailResponse",
+    "ProjectListResponse",
+    "ProjectEnrollmentResponse",
+    "ProjectProgressResponse",
+    "ProjectCreate",
+    "ProjectUpdate",
 ]
 

@@ -30,6 +30,10 @@ from app.repositories.practice_repo import (
     PracticeRepository,
     practice_repo,
 )
+from app.repositories.project_repo import (
+    ProjectRepository,
+    project_repo,
+)
 from app.repositories.roadmap_repo import (
     RoadmapRepository,
     roadmap_repo,
@@ -71,6 +75,8 @@ __all__ = [
     "certification_repo",
     "PracticeRepository",
     "practice_repo",
+    "ProjectRepository",
+    "project_repo",
     "CertificateRepository",
     "certificate_repo",
 ]

@@ -43,6 +43,9 @@ class ActivityType(str, enum.Enum):
     COURSE_ENROLLED = "course_enrolled"
     COURSE_COMPLETED = "course_completed"
     LESSON_TIME_RECORDED = "lesson_time_recorded"
+    PROJECT_STARTED = "project_started"
+    PROJECT_STEP_COMPLETED = "project_step_completed"
+    PROJECT_COMPLETED = "project_completed"
 
 
 class LessonProgress(Base, TimestampMixin):

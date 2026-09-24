@@ -53,6 +53,21 @@ from app.models.skill import (
     UserSkill,
     get_level_from_percentage,
 )
+from app.models.project import (
+    Project,
+    ProjectCourse,
+    ProjectDifficulty,
+    ProjectEnrollmentStatus,
+    ProjectResource,
+    ProjectResourceType,
+    ProjectSkill,
+    ProjectStatus,
+    ProjectStep,
+    ProjectStepProgress,
+    StepProgressStatus,
+    StepType,
+    UserProjectEnrollment,
+)
 from app.models.user import RefreshToken, User, UserRole
 
 __all__ = [
@@ -98,4 +113,17 @@ __all__ = [
     "CertificateStatus",
     "generate_verification_code",
     "generate_certificate_number",
+    "Project",
+    "ProjectStep",
+    "ProjectResource",
+    "UserProjectEnrollment",
+    "ProjectStepProgress",
+    "ProjectCourse",
+    "ProjectSkill",
+    "ProjectDifficulty",
+    "ProjectStatus",
+    "StepType",
+    "ProjectEnrollmentStatus",
+    "StepProgressStatus",
+    "ProjectResourceType",
 ]

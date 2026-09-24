@@ -12,6 +12,7 @@ from app.api.v1.endpoints import (
     health,
     lessons,
     practice,
+    projects,
     roadmaps,
     skills,
     trainings,
@@ -53,3 +54,5 @@ api_router.include_router(practice.router, tags=["Practice Exams & Quizzes"])
 # CloudForge Certificates & Public Verification
 api_router.include_router(certificates.router, prefix="/certificates", tags=["Certificates"])
 
+# Engineering Projects & DevOps Workflows
+api_router.include_router(projects.router, prefix="/projects", tags=["Engineering Projects"])

@@ -15,6 +15,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import AsyncSessionLocal
 from app.core.logging import logger
 from app.models.course import Course, CourseCategory, CourseDifficulty, CourseModule, Lesson, LessonResource
+from app.models.project import (
+    Project,
+    ProjectCourse,
+    ProjectEnrollmentStatus,
+    ProjectResource,
+    ProjectSkill,
+    ProjectStep,
+    ProjectStepProgress,
+    StepProgressStatus,
+    UserProjectEnrollment,
+)
+from app.db.seed_projects_data import PROJECTS_DATA
 
 COURSES_DATA: List[Dict[str, Any]] = [
     {
@@ -1514,6 +1526,184 @@ async def seed_certifications_and_exams(db: AsyncSession) -> None:
     logger.info("Certifications, Trainings & Practice Questions seeding complete!")
 
 
+async def seed_projects(db: AsyncSession):
+    """Seed the 8 practical DevOps engineering projects, steps, resources, and connections."""
+    logger.info("Seeding practical DevOps engineering projects...")
+
+    courses_res = await db.execute(select(Course))
+    courses_map = {c.slug: c for c in courses_res.scalars().all()}
+
+    skills_res = await db.execute(select(Skill))
+    skills_map = {s.slug: s for s in skills_res.scalars().all()}
+
+    now = datetime.now(timezone.utc)
+
+    for p_data in PROJECTS_DATA:
+        p_res = await db.execute(select(Project).where(Project.slug == p_data["slug"]))
+        project = p_res.scalars().first()
+
+        if not project:
+            project = Project(
+                title=p_data["title"],
+                slug=p_data["slug"],
+                short_description=p_data["short_description"],
+                description=p_data["description"],
+                difficulty=p_data["difficulty"],
+                estimated_hours=p_data["estimated_hours"],
+                status=p_data["status"],
+                featured=p_data["featured"],
+                technologies=p_data["technologies"],
+                deliverables=p_data["deliverables"],
+                architecture_overview=p_data["architecture_overview"],
+                prerequisites=p_data["prerequisites"],
+                learning_objectives=p_data["learning_objectives"],
+                repository_url=p_data["repository_url"],
+                documentation_url=p_data["documentation_url"],
+            )
+            db.add(project)
+            await db.flush()
+            logger.info(f"Created Project: {project.title}")
+
+            # Add Project Steps
+            for s_data in p_data.get("steps", []):
+                step = ProjectStep(
+                    project_id=project.id,
+                    step_order=s_data["step_order"],
+                    step_type=s_data["step_type"],
+                    title=s_data["title"],
+                    description=s_data.get("description"),
+                    instructions=s_data.get("instructions"),
+                    command=s_data.get("command"),
+                    expected_outcome=s_data.get("expected_outcome"),
+                    is_required=s_data.get("is_required", True),
+                )
+                db.add(step)
+
+            # Add Project Resources
+            for r_data in p_data.get("resources", []):
+                resource = ProjectResource(
+                    project_id=project.id,
+                    title=r_data["title"],
+                    resource_type=r_data["resource_type"],
+                    url=r_data["url"],
+                    description=r_data.get("description"),
+                    display_order=r_data.get("display_order", 0),
+                )
+                db.add(resource)
+
+            # Link Courses
+            for c_slug in p_data.get("course_slugs", []):
+                course = courses_map.get(c_slug)
+                if course:
+                    db.add(ProjectCourse(project_id=project.id, course_id=course.id))
+
+            # Link Skills
+            for s_slug in p_data.get("skill_slugs", []):
+                skill = skills_map.get(s_slug)
+                if skill:
+                    db.add(ProjectSkill(project_id=project.id, skill_id=skill.id))
+
+    # Enroll demo student in Kubernetes Production Deployment & CloudForge CI/CD Pipeline
+    student_res = await db.execute(select(User).where(User.email == "student@cloudforge.io"))
+    student = student_res.scalars().first()
+
+    if student:
+        # Project 1: Kubernetes Production Deployment (In Progress)
+        k8s_proj_res = await db.execute(
+            select(Project).where(Project.slug == "kubernetes-production-deployment")
+        )
+        k8s_proj = k8s_proj_res.scalars().first()
+        if k8s_proj:
+            enr_res = await db.execute(
+                select(UserProjectEnrollment).where(
+                    UserProjectEnrollment.user_id == student.id,
+                    UserProjectEnrollment.project_id == k8s_proj.id,
+                )
+            )
+            if not enr_res.scalars().first():
+                db.add(
+                    UserProjectEnrollment(
+                        user_id=student.id,
+                        project_id=k8s_proj.id,
+                        status=ProjectEnrollmentStatus.IN_PROGRESS.value,
+                        started_at=now,
+                        last_activity_at=now,
+                    )
+                )
+                # Mark first 6 steps as completed
+                steps_res = await db.execute(
+                    select(ProjectStep)
+                    .where(ProjectStep.project_id == k8s_proj.id)
+                    .order_by(ProjectStep.step_order.asc())
+                )
+                k8s_steps = list(steps_res.scalars().all())
+                for idx, step in enumerate(k8s_steps):
+                    if idx < 6:
+                        db.add(
+                            ProjectStepProgress(
+                                user_id=student.id,
+                                project_step_id=step.id,
+                                status=StepProgressStatus.COMPLETED.value,
+                                started_at=now,
+                                completed_at=now,
+                                notes="Completed in local kind cluster environment.",
+                            )
+                        )
+                    elif idx == 6:
+                        db.add(
+                            ProjectStepProgress(
+                                user_id=student.id,
+                                project_step_id=step.id,
+                                status=StepProgressStatus.IN_PROGRESS.value,
+                                started_at=now,
+                                notes="Currently investigating CrashLoopBackOff.",
+                            )
+                        )
+
+        # Project 2: CloudForge CI/CD Pipeline (Completed)
+        cicd_proj_res = await db.execute(
+            select(Project).where(Project.slug == "cloudforge-cicd-pipeline")
+        )
+        cicd_proj = cicd_proj_res.scalars().first()
+        if cicd_proj:
+            enr_res = await db.execute(
+                select(UserProjectEnrollment).where(
+                    UserProjectEnrollment.user_id == student.id,
+                    UserProjectEnrollment.project_id == cicd_proj.id,
+                )
+            )
+            if not enr_res.scalars().first():
+                db.add(
+                    UserProjectEnrollment(
+                        user_id=student.id,
+                        project_id=cicd_proj.id,
+                        status=ProjectEnrollmentStatus.COMPLETED.value,
+                        started_at=now,
+                        completed_at=now,
+                        last_activity_at=now,
+                    )
+                )
+                steps_res = await db.execute(
+                    select(ProjectStep)
+                    .where(ProjectStep.project_id == cicd_proj.id)
+                    .order_by(ProjectStep.step_order.asc())
+                )
+                for step in steps_res.scalars().all():
+                    db.add(
+                        ProjectStepProgress(
+                            user_id=student.id,
+                            project_step_id=step.id,
+                            status=StepProgressStatus.COMPLETED.value,
+                            started_at=now,
+                            completed_at=now,
+                            notes="Verified with GitHub Actions matrix execution.",
+                        )
+                    )
+
+    await db.commit()
+    logger.info("Projects seeding complete!")
+
+
 async def main():
     """CLI execution entrypoint."""
     async with AsyncSessionLocal() as session:
@@ -1521,8 +1711,8 @@ async def main():
         await seed_demo_student_progress(session)
         await seed_skills_and_roadmaps(session)
         await seed_certifications_and_exams(session)
+        await seed_projects(session)
 
 
 if __name__ == "__main__":
     asyncio.run(main())
-

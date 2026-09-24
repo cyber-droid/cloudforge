@@ -473,6 +473,50 @@ class ApiClient {
   async verifyCertificate(verificationCode: string) {
     return this.request<ApiCertificateVerify>(`/certificates/verify/${verificationCode}`)
   }
+
+  // Phase 7: Projects & DevOps Engineering Workflows
+  async getProjects(params?: { page?: number; page_size?: number; difficulty?: string; status?: string; featured?: boolean; search?: string }) {
+    const sp = new URLSearchParams()
+    if (params?.page) sp.append('page', String(params.page))
+    if (params?.page_size) sp.append('page_size', String(params.page_size))
+    if (params?.difficulty && params.difficulty !== 'All') sp.append('difficulty', params.difficulty)
+    if (params?.status && params.status !== 'All') sp.append('status', params.status)
+    if (params?.featured !== undefined) sp.append('featured', String(params.featured))
+    if (params?.search) sp.append('search', params.search)
+    const qs = sp.toString()
+    return this.request<ApiProjectList>(`/projects${qs ? `?${qs}` : ''}`)
+  }
+
+  async getProject(slugOrId: string) {
+    return this.request<ApiProjectDetail>(`/projects/${slugOrId}`)
+  }
+
+  async getMyProjects() {
+    return this.request<ApiProjectEnrollment[]>('/projects/my')
+  }
+
+  async enrollProject(projectId: string) {
+    return this.request<ApiProjectEnrollment>(`/projects/${projectId}/enroll`, {
+      method: 'POST',
+    })
+  }
+
+  async getProjectProgress(projectId: string) {
+    return this.request<ApiProjectProgress>(`/projects/${projectId}/progress`)
+  }
+
+  async startProjectStep(projectId: string, stepId: string) {
+    return this.request<ApiProjectStep>(`/projects/${projectId}/steps/${stepId}/start`, {
+      method: 'POST',
+    })
+  }
+
+  async completeProjectStep(projectId: string, stepId: string, notes?: string) {
+    return this.request<ApiProjectProgress>(`/projects/${projectId}/steps/${stepId}/complete`, {
+      method: 'POST',
+      body: JSON.stringify({ notes }),
+    })
+  }
 }
 
 export interface ApiSkillCourseReference {
@@ -759,5 +803,116 @@ export interface ApiCertificateVerify {
   message: string
 }
 
-export const api = new ApiClient()
+// Phase 7: Projects & DevOps Workflows Interfaces
+export interface ApiProjectStep {
+  id: string
+  project_id: string
+  title: string
+  description?: string
+  step_order: number
+  step_type: string
+  instructions?: string
+  command?: string
+  expected_outcome?: string
+  is_required: boolean
+  completed: boolean
+  status: string
+  started_at?: string
+  completed_at?: string
+}
 
+export interface ApiProjectResource {
+  id: string
+  project_id: string
+  title: string
+  resource_type: string
+  url: string
+  description?: string
+  display_order: number
+}
+
+export interface ApiProjectCourseRef {
+  id: string
+  title: string
+  slug: string
+  category?: string
+  difficulty?: string
+}
+
+export interface ApiProjectSkillRef {
+  id: string
+  name: string
+  slug: string
+  category?: string
+  target_level?: number
+}
+
+export interface ApiProjectSummary {
+  id: string
+  title: string
+  slug: string
+  short_description?: string
+  description: string
+  difficulty: string
+  estimated_hours: string
+  status: string
+  featured: boolean
+  technologies: string[]
+  deliverables: string[]
+  repository_url?: string
+  documentation_url?: string
+  progress: number
+  progress_percentage: number
+  user_status: string
+  completed_steps: number
+  total_steps: number
+  skills: string[]
+  created_at?: string
+}
+
+export interface ApiProjectDetail extends ApiProjectSummary {
+  architecture_overview?: string
+  prerequisites: string[]
+  learning_objectives: string[]
+  steps: ApiProjectStep[]
+  resources: ApiProjectResource[]
+  related_courses: ApiProjectCourseRef[]
+  related_skills: ApiProjectSkillRef[]
+}
+
+export interface ApiProjectList {
+  items: ApiProjectSummary[]
+  total: number
+  page: number
+  page_size: number
+}
+
+export interface ApiProjectEnrollment {
+  id: string
+  user_id: string
+  project_id: string
+  status: string
+  started_at: string
+  completed_at?: string
+  last_activity_at: string
+  progress_percentage: number
+  completed_steps: number
+  total_steps: number
+  project?: ApiProjectSummary
+}
+
+export interface ApiProjectProgress {
+  project_id: string
+  user_id: string
+  status: string
+  progress_percentage: number
+  completed_steps: number
+  total_steps: number
+  is_completed: boolean
+  started_at?: string
+  completed_at?: string
+  last_activity_at?: string
+  steps: ApiProjectStep[]
+}
+
+export const api = new ApiClient()

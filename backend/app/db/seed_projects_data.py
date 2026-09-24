@@ -1,0 +1,1265 @@
+"""
+Comprehensive seed data for the 8 practical CloudForge DevOps & Cloud Engineering Projects.
+Follows the Learn -> Build -> Break -> Troubleshoot -> Fix -> Document -> Automate methodology.
+"""
+from typing import Any, Dict, List
+
+PROJECTS_DATA: List[Dict[str, Any]] = [
+    {
+        "slug": "cloudforge-cicd-pipeline",
+        "title": "CloudForge CI/CD Pipeline",
+        "short_description": "Production GitHub Actions CI/CD pipeline with multi-stage Docker builds, security scanning, and automated releases.",
+        "description": "Construct an enterprise-ready continuous integration and continuous delivery pipeline for high-scale microservices. Integrate matrix unit testing, linting, Trivy container security scans, multi-architecture OCI image publishing to GitHub Container Registry (GHCR), and automated semantic release workflows.",
+        "difficulty": "Intermediate",
+        "estimated_hours": "12 hours",
+        "status": "published",
+        "featured": True,
+        "technologies": ["GitHub Actions", "Docker", "Trivy", "GHCR", "Bash", "Node.js", "Semantic Release"],
+        "deliverables": [
+            "Reusable GitHub Actions workflow matrix (.github/workflows/ci-cd.yml)",
+            "Multi-stage Dockerfile with layer caching and non-root security",
+            "Trivy vulnerability scanner with blocking severity thresholds",
+            "Automated changelog and semantic version tagging workflow",
+            "Branch protection rules and PR status checks documentation"
+        ],
+        "prerequisites": [
+            "DevOps Engineering Foundations",
+            "Familiarity with Git branching and Pull Request workflows",
+            "Basic understanding of Docker containers and Linux commands"
+        ],
+        "learning_objectives": [
+            "Design deterministic, high-throughput GitHub Actions workflow pipelines",
+            "Optimize Docker build times using BuildKit cache mounts and multi-stage targets",
+            "Embed automated security gates to halt builds with critical CVE vulnerabilities",
+            "Configure fine-grained GitHub OIDC tokens for secure package registry publishing",
+            "Troubleshoot subtle CI cache invalidation and broken pipeline artifacts"
+        ],
+        "architecture_overview": "Developers push commits to feature branches, triggering the CI workflow. The pipeline runs linting and unit tests in parallel matrix runners. Upon success, BuildKit builds a multi-stage Docker image using remote cache, executes a Trivy vulnerability scan, and pushes the signed image to GHCR before tagging the release.",
+        "repository_url": "https://github.com/cloudforge/cloudforge-cicd-pipeline",
+        "documentation_url": "https://docs.cloudforge.io/projects/cicd-pipeline",
+        "course_slugs": ["devops-engineering-foundations", "devsecops-engineering"],
+        "skill_slugs": ["cicd", "docker", "git", "devsecops"],
+        "resources": [
+            {
+                "title": "GitHub Actions Workflow Syntax Reference",
+                "resource_type": "documentation",
+                "url": "https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions",
+                "description": "Official syntax specifications for jobs, steps, matrices, and runners.",
+                "display_order": 1
+            },
+            {
+                "title": "Docker Multi-Stage Build Best Practices",
+                "resource_type": "tutorial",
+                "url": "https://docs.docker.com/build/building/multi-stage/",
+                "description": "Techniques for minimizing image footprints and isolating build dependencies.",
+                "display_order": 2
+            },
+            {
+                "title": "Pipeline Architecture Diagram",
+                "resource_type": "architecture_diagram",
+                "url": "https://raw.githubusercontent.com/cloudforge/assets/main/diagrams/cicd-architecture.png",
+                "description": "Visual diagram showing parallel matrix jobs, caching layers, and registry publish flows.",
+                "display_order": 3
+            }
+        ],
+        "steps": [
+            {
+                "step_order": 1,
+                "step_type": "learn",
+                "title": "Learn CI/CD Pipeline Architecture & GitHub Actions Workflows",
+                "description": "Understand pipeline runners, event triggers, context variables, and workflow dispatch mechanics.",
+                "instructions": "Review the GitHub Actions workflow event model (pull_request, push, workflow_dispatch). Explore runner environments, environment secrets handling, and job concurrency limits.",
+                "command": "git checkout -b feature/setup-cicd-pipeline",
+                "expected_outcome": "Local feature branch established with template workflow directories (.github/workflows/).",
+                "is_required": True
+            },
+            {
+                "step_order": 2,
+                "step_type": "build",
+                "title": "Build Multi-Stage Dockerfile with Dependency Layer Caching",
+                "description": "Write an optimized, production-grade Dockerfile separating dependency installation, compilation, and runtime stages.",
+                "instructions": "Create a Dockerfile using Node 20 alpine base. Leverage '--from=builder' to extract only the production distribution bundle, run under an unprivileged 'appuser', and use cache mounts for package managers.",
+                "command": "docker build -t cloudforge-app:test .",
+                "expected_outcome": "Container image builds successfully with image size under 50MB and non-root USER directive.",
+                "is_required": True
+            },
+            {
+                "step_order": 3,
+                "step_type": "configure",
+                "title": "Configure Matrix Automated Test Runner in GitHub Actions",
+                "description": "Define matrix strategy to execute unit and integration test suites across Node.js versions.",
+                "instructions": "Author .github/workflows/ci.yml with a 'test' job running a matrix of Node versions [18.x, 20.x]. Use actions/cache to cache node_modules keyed by package-lock.json hash.",
+                "command": "act pull_request -j test || npm test",
+                "expected_outcome": "Test job passes across matrix configurations with automated npm cache hits on rerun.",
+                "is_required": True
+            },
+            {
+                "step_order": 4,
+                "step_type": "configure",
+                "title": "Integrate Trivy Container Image Vulnerability Scanning",
+                "description": "Embed automated container vulnerability scanning into the pipeline with blocking severity thresholds.",
+                "instructions": "Add aquasecurity/trivy-action to scan the built container image. Set exit-code: '1' and severity: 'CRITICAL,HIGH' to block builds containing unpatched CVEs.",
+                "command": "trivy image --severity HIGH,CRITICAL cloudforge-app:test",
+                "expected_outcome": "Trivy scan generates SARIF report and verifies that no critical CVEs exist in the base image.",
+                "is_required": True
+            },
+            {
+                "step_order": 5,
+                "step_type": "break",
+                "title": "Intentionally Break the Pipeline with Incompatible Dependencies & Broken Cache",
+                "description": "Simulate real-world pipeline failures caused by conflicting lockfiles and stale layer cache keys.",
+                "instructions": "Inject a conflicting peer dependency in package.json without updating package-lock.json, and corrupt the Docker cache key in the workflow definition.",
+                "command": "git commit -am 'test: inject conflicting dependency for pipeline resilience validation'",
+                "expected_outcome": "Pipeline fails on CI runner with lockfile mismatch error (npm ci exit code 1) and Docker cache miss.",
+                "is_required": True
+            },
+            {
+                "step_order": 6,
+                "step_type": "troubleshoot",
+                "title": "Troubleshoot Failing Pipeline Logs and Cache Invalidation Errors",
+                "description": "Analyze CI build logs, inspect raw step output, and trace dependency conflict graphs.",
+                "instructions": "Inspect the raw runner output under GitHub Actions step 'Run npm ci'. Identify the conflicting peer dependency tree and diagnose why the layer cache was bypassed.",
+                "command": "npm ls --all || docker history --no-trunc cloudforge-app:test",
+                "expected_outcome": "Root cause isolated: peer dependency conflict in package-lock.json and malformed cache hash key.",
+                "is_required": True
+            },
+            {
+                "step_order": 7,
+                "step_type": "fix",
+                "title": "Fix Docker Layering and Pin Vulnerable Dependencies",
+                "description": "Resolve dependency tree, regenerate clean lockfile, and correct Dockerfile layer caching directives.",
+                "instructions": "Run 'npm install --package-lock-only' to regenerate lockfile. Order Dockerfile COPY commands so package.json precedes application source code to maximize cache reusability.",
+                "command": "npm ci && docker build --build-arg BUILDKIT_INLINE_CACHE=1 -t cloudforge-app:fixed .",
+                "expected_outcome": "Local and remote builds pass cleanly with 100% cache hit on second run.",
+                "is_required": True
+            },
+            {
+                "step_order": 8,
+                "step_type": "deploy",
+                "title": "Add Ephemeral Staging Deployment and Semantic Version Tagging",
+                "description": "Publish release container image to GHCR and trigger semantic release versioning on main branch merge.",
+                "instructions": "Configure docker/build-push-action to push to ghcr.io/cloudforge/cloudforge-app with branch and sha tags. Add semantic-release step to generate GitHub releases and changelog notes.",
+                "command": "git push origin feature/setup-cicd-pipeline",
+                "expected_outcome": "Pull request opened; status checks pass; merge produces automated v1.0.0 release tag and GHCR image.",
+                "is_required": True
+            },
+            {
+                "step_order": 9,
+                "step_type": "document",
+                "title": "Document Pipeline Architecture & Onboarding Runbook",
+                "description": "Produce engineering documentation detailing secrets rotation, pipeline maintenance, and rollback procedures.",
+                "instructions": "Create docs/pipeline-runbook.md outlining workflow triggers, environment secrets, required status checks, and troubleshooting steps for on-call engineers.",
+                "command": "cat docs/pipeline-runbook.md",
+                "expected_outcome": "Comprehensive markdown runbook committed to repository.",
+                "is_required": True
+            },
+            {
+                "step_order": 10,
+                "step_type": "test",
+                "title": "Complete & Automate Pull Request Verification Gate",
+                "description": "Verify end-to-end pipeline execution and enforce required branch protection status checks.",
+                "instructions": "Validate that PRs require passing CI test matrix, Trivy security scan, and approval before merge is permitted.",
+                "command": "gh pr checks",
+                "expected_outcome": "All status checks green and branch protection verification passes.",
+                "is_required": True
+            }
+        ]
+    },
+    {
+        "slug": "containerized-web-platform",
+        "title": "Containerized Web Platform",
+        "short_description": "Architect and containerize a polyglot microservice application stack with Docker Compose and healthcheck probes.",
+        "description": "Transform a monolithic multi-tiered web application into a set of production-grade containerized services. Implement multi-stage builds, non-root user execution, custom bridge networks, volume persistence for PostgreSQL and Redis, and automated healthcheck probes.",
+        "difficulty": "Beginner",
+        "estimated_hours": "10 hours",
+        "status": "published",
+        "featured": False,
+        "technologies": ["Docker", "Docker Compose", "PostgreSQL", "Redis", "Nginx", "Linux", "Bash"],
+        "deliverables": [
+            "Optimized Dockerfiles for React frontend, Node backend, and Nginx reverse proxy",
+            "Production-ready docker-compose.yml with health checks and restart policies",
+            "Custom Docker network topology isolating database from public ingress",
+            "Named volumes configuration for persistent PostgreSQL database storage",
+            "Container startup diagnostic script (check-health.sh)"
+        ],
+        "prerequisites": [
+            "DevOps Engineering Foundations",
+            "Basic Linux terminal navigation and environment variable configuration"
+        ],
+        "learning_objectives": [
+            "Master Dockerfile instructions (COPY, RUN, CMD, ENTRYPOINT, EXPOSE, HEALTHCHECK)",
+            "Structure multi-stage Docker builds to eliminate compiler toolchains from runtime images",
+            "Configure Docker Compose service dependencies (depends_on with service_healthy condition)",
+            "Implement container network isolation with internal and public bridge networks",
+            "Diagnose container startup failures, OOM kills, and volume permission mismatches"
+        ],
+        "architecture_overview": "An Nginx reverse proxy listens on port 80/443 and routes API traffic to the backend application container and static assets to the frontend web container. The backend communicates over an isolated internal network with PostgreSQL and Redis instances.",
+        "repository_url": "https://github.com/cloudforge/containerized-web-platform",
+        "documentation_url": "https://docs.cloudforge.io/projects/containerized-platform",
+        "course_slugs": ["devops-engineering-foundations"],
+        "skill_slugs": ["docker", "linux"],
+        "resources": [
+            {
+                "title": "Docker Compose File Specification",
+                "resource_type": "documentation",
+                "url": "https://docs.docker.com/compose/compose-file/",
+                "description": "Compose schema definitions for services, networks, volumes, and secrets.",
+                "display_order": 1
+            },
+            {
+                "title": "Container Security Best Practices",
+                "resource_type": "reference",
+                "url": "https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html",
+                "description": "OWASP Docker security guidelines for unprivileged execution and capability drops.",
+                "display_order": 2
+            }
+        ],
+        "steps": [
+            {
+                "step_order": 1,
+                "step_type": "learn",
+                "title": "Learn Container Fundamentals, Namespaces & cgroups",
+                "description": "Study Linux isolation primitives (PID, Mount, Net namespaces) and resource control groups.",
+                "instructions": "Explore how the container runtime configures namespaces to isolate processes and cgroups to enforce CPU and memory boundaries.",
+                "command": "docker info && docker version",
+                "expected_outcome": "Docker daemon verified and running with BuildKit support enabled.",
+                "is_required": True
+            },
+            {
+                "step_order": 2,
+                "step_type": "build",
+                "title": "Build Multi-Stage Dockerfile for Frontend and Backend",
+                "description": "Create slim, secure Dockerfiles for the frontend static build and the backend API server.",
+                "instructions": "Implement multi-stage Dockerfiles. Use distroless or alpine base images and add a non-root system user to execute the process.",
+                "command": "docker build -t cloudforge/frontend:latest ./frontend && docker build -t cloudforge/backend:latest ./backend",
+                "expected_outcome": "Both images build successfully with minimal layer overhead and non-root execution.",
+                "is_required": True
+            },
+            {
+                "step_order": 3,
+                "step_type": "configure",
+                "title": "Configure Docker Compose Multi-Container Networking & Volume Mounts",
+                "description": "Define docker-compose.yml with separated frontend, backend, database, and cache services.",
+                "instructions": "Create docker-compose.yml defining 'frontend-net' (public) and 'backend-net' (internal). Configure named volumes for Postgres data persistence.",
+                "command": "docker compose config",
+                "expected_outcome": "Docker Compose configuration validates without syntax or interpolation errors.",
+                "is_required": True
+            },
+            {
+                "step_order": 4,
+                "step_type": "configure",
+                "title": "Configure Container Healthchecks and Resource Limits",
+                "description": "Add HEALTHCHECK instructions and depends_on health condition gates across services.",
+                "instructions": "Configure pg_isready healthcheck on PostgreSQL and curl health check on backend API. Set depends_on condition: service_healthy on dependent services.",
+                "command": "docker compose up -d",
+                "expected_outcome": "All services start in correct dependency order and transition to 'healthy' state.",
+                "is_required": True
+            },
+            {
+                "step_order": 5,
+                "step_type": "break",
+                "title": "Intentionally Break Container Startup via Missing Environment Secrets",
+                "description": "Simulate database connection crashes and file permission errors on persistent volume mount.",
+                "instructions": "Unset the DATABASE_URL environment variable in the backend service and change file permissions on the mounted volume directory to root-only.",
+                "command": "docker compose restart backend",
+                "expected_outcome": "Backend container enters restarting crash loop with database connection refused error.",
+                "is_required": True
+            },
+            {
+                "step_order": 6,
+                "step_type": "troubleshoot",
+                "title": "Investigate Exit Code 137 OOMKilled and Unhealthy Probes",
+                "description": "Use docker logs, docker inspect, and docker stats to diagnose container failure causes.",
+                "instructions": "Run 'docker compose logs backend' and 'docker inspect' on the crashing container to inspect exit codes and healthcheck error outputs.",
+                "command": "docker compose logs backend --tail=50 && docker compose ps",
+                "expected_outcome": "Diagnosed missing database connection string and permission denied error on mounted volume.",
+                "is_required": True
+            },
+            {
+                "step_order": 7,
+                "step_type": "fix",
+                "title": "Fix Memory Limits, Restart Policies, and Non-Root User Permissions",
+                "description": "Restore environment configuration, adjust UID/GID volume ownership, and tune memory limits.",
+                "instructions": "Fix environment variables in .env file, apply correct chown permissions on data volume, and configure memory limit to 512MB.",
+                "command": "docker compose up -d --force-recreate",
+                "expected_outcome": "All containers recover and reach 'healthy' status within 15 seconds.",
+                "is_required": True
+            },
+            {
+                "step_order": 8,
+                "step_type": "deploy",
+                "title": "Deploy Local Stack with Persistent Storage Volumes",
+                "description": "Verify complete end-to-end data persistence and service communication across container restarts.",
+                "instructions": "Insert test records into the PostgreSQL database, restart the full compose stack with 'docker compose down && docker compose up -d', and verify data persists.",
+                "command": "curl -s http://localhost:8080/api/health | grep 'ok'",
+                "expected_outcome": "API returns 200 OK and persistent records are intact following stack recreation.",
+                "is_required": True
+            },
+            {
+                "step_order": 9,
+                "step_type": "document",
+                "title": "Document Microservice Container Architecture",
+                "description": "Produce developer onboarding and production deployment guidelines for the container stack.",
+                "instructions": "Create README.md with container architecture diagram, environment variable specifications, and quick-start instructions.",
+                "command": "cat README.md",
+                "expected_outcome": "Documentation complete and committed to git.",
+                "is_required": True
+            }
+        ]
+    },
+    {
+        "slug": "kubernetes-production-deployment",
+        "title": "Kubernetes Production Deployment",
+        "short_description": "Deploy, scale, and troubleshoot a resilient microservice architecture on Kubernetes with zero-downtime rolling updates.",
+        "description": "Deploy a high-availability cloud-native microservice application on Kubernetes. Craft production-grade declarative manifests including Deployments, ClusterIP & NodePort Services, Ingress routes, ConfigMaps, Secrets, Horizontal Pod Autoscaling (HPA), Pod Disruption Budgets (PDB), and Calico NetworkPolicies. Practice troubleshooting real-world CrashLoopBackOff, OOMKilled, and Pending pod failure scenarios.",
+        "difficulty": "Intermediate",
+        "estimated_hours": "16 hours",
+        "status": "published",
+        "featured": True,
+        "technologies": ["Kubernetes", "kubectl", "kind", "Nginx Ingress", "HPA", "Prometheus", "Helm"],
+        "deliverables": [
+            "Complete Kubernetes manifests suite (deployments, services, ingress, configmaps, secrets)",
+            "Horizontal Pod Autoscaler (HPA) targeting CPU/Memory utilization thresholds",
+            "Calico NetworkPolicy restricting inter-pod traffic to authorized namespaces",
+            "PodDisruptionBudget (PDB) guaranteeing 99.9% uptime during node drain events",
+            "Kubernetes incident troubleshooting runbook (CrashLoopBackOff & Pending pods)"
+        ],
+        "prerequisites": [
+            "Kubernetes Engineering course",
+            "Containerized Web Platform project",
+            "Working knowledge of kubectl CLI and container runtimes"
+        ],
+        "learning_objectives": [
+            "Architect production Kubernetes workloads with declarative YAML specifications",
+            "Implement zero-downtime rolling update deployment strategies with surge and unavailable controls",
+            "Configure resilient Liveness, Readiness, and Startup health probes",
+            "Enforce security boundaries using non-root SecurityContexts and NetworkPolicies",
+            "Master advanced kubectl debugging workflows (describe, logs, exec, port-forward, events)"
+        ],
+        "architecture_overview": "An Nginx Ingress Controller handles incoming HTTP/HTTPS traffic and routes requests to frontend and backend Kubernetes Services. The backend Deployment scales dynamically using HPA based on metrics provided by Prometheus Adapter. NetworkPolicies isolate database pods from external ingress.",
+        "repository_url": "https://github.com/cloudforge/kubernetes-production-deployment",
+        "documentation_url": "https://docs.cloudforge.io/projects/k8s-production-deployment",
+        "course_slugs": ["kubernetes-engineering"],
+        "skill_slugs": ["kubernetes", "docker", "helm"],
+        "resources": [
+            {
+                "title": "Kubernetes Official Production Best Practices",
+                "resource_type": "documentation",
+                "url": "https://kubernetes.io/docs/concepts/configuration/overview/",
+                "description": "Official guidelines for structuring manifests, resource limits, and health probes.",
+                "display_order": 1
+            },
+            {
+                "title": "Kubernetes Pod Lifecycle & Health Probes",
+                "resource_type": "reference",
+                "url": "https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/",
+                "description": "Deep dive into Startup, Liveness, and Readiness probe mechanics.",
+                "display_order": 2
+            },
+            {
+                "title": "Cluster Architecture Topology",
+                "resource_type": "architecture_diagram",
+                "url": "https://raw.githubusercontent.com/cloudforge/assets/main/diagrams/k8s-architecture.png",
+                "description": "Visual diagram of Ingress, Services, Pods, HPA, and NetworkPolicies.",
+                "display_order": 3
+            }
+        ],
+        "steps": [
+            {
+                "step_order": 1,
+                "step_type": "learn",
+                "title": "Learn Kubernetes Architecture & Control Plane Mechanics",
+                "description": "Examine the Kubernetes Control Plane components: kube-apiserver, etcd, kube-scheduler, and kube-controller-manager.",
+                "instructions": "Study how the declarative state in etcd is continuously reconciled by controllers against actual worker node status.",
+                "command": "kubectl cluster-info",
+                "expected_outcome": "Kubernetes control plane and core services verified active and reachable.",
+                "is_required": True
+            },
+            {
+                "step_order": 2,
+                "step_type": "build",
+                "title": "Containerize the Application Microservices",
+                "description": "Build container images with unprivileged user directives and push to local cluster registry.",
+                "instructions": "Build frontend and backend container images tagged for local kind/k8s registry.",
+                "command": "kind load docker-image cloudforge-api:v1.0.0 --name cloudforge-cluster",
+                "expected_outcome": "Container image loaded into local Kubernetes cluster node image cache.",
+                "is_required": True
+            },
+            {
+                "step_order": 3,
+                "step_type": "build",
+                "title": "Create Kubernetes Deployments, Services, and Ingress Manifests",
+                "description": "Author declarative YAML manifests for Deployments, ClusterIP Services, and Ingress routing rules.",
+                "instructions": "Write k8s/deployment.yaml with 3 replicas, resource requests/limits (100m CPU / 128Mi RAM), and rollingUpdate strategy (maxSurge: 1, maxUnavailable: 0).",
+                "command": "kubectl apply -f k8s/manifests/",
+                "expected_outcome": "Deployments, Services, and Ingress resources created in the 'cloudforge' namespace.",
+                "is_required": True
+            },
+            {
+                "step_order": 4,
+                "step_type": "deploy",
+                "title": "Deploy Locally with kind / Minikube Cluster",
+                "description": "Deploy manifests to cluster and verify Pod scheduling across nodes.",
+                "instructions": "Apply namespace and workload manifests. Verify that all pods transition to the 'Running' state.",
+                "command": "kubectl get pods -n cloudforge -o wide",
+                "expected_outcome": "All 3 backend replicas and 2 frontend replicas running cleanly.",
+                "is_required": True
+            },
+            {
+                "step_order": 5,
+                "step_type": "configure",
+                "title": "Configure Liveness, Readiness, and Startup Probes",
+                "description": "Configure HTTP GET probes with appropriate initialDelaySeconds, periodSeconds, and failureThresholds.",
+                "instructions": "Add startupProbe (failureThreshold: 30, periodSeconds: 2), livenessProbe (/health/liveness), and readinessProbe (/health/readiness) to backend containers.",
+                "command": "kubectl describe deployment backend -n cloudforge | grep -A 10 Probes",
+                "expected_outcome": "Probes configured correctly; pods receive traffic only after readiness succeeds.",
+                "is_required": True
+            },
+            {
+                "step_order": 6,
+                "step_type": "configure",
+                "title": "Configure Horizontal Pod Autoscaler (HPA) and Resource Quotas",
+                "description": "Implement automated pod scaling based on CPU and memory utilization thresholds.",
+                "instructions": "Create an HPA resource targeting 70% average CPU utilization with minReplicas: 2 and maxReplicas: 10. Configure Namespace ResourceQuota.",
+                "command": "kubectl autoscale deployment backend --cpu-percent=70 --min=2 --max=10 -n cloudforge",
+                "expected_outcome": "HPA active and tracking live metrics via Kubernetes metrics-server.",
+                "is_required": True
+            },
+            {
+                "step_order": 7,
+                "step_type": "break",
+                "title": "Intentionally Break the Deployment with Misconfigured Probe Ports & OOM Limit",
+                "description": "Simulate real-world production outages by injecting port mismatches and severe memory constraints.",
+                "instructions": "Update the deployment readiness probe port to an invalid port (9999) and reduce memory limits to 10Mi to induce CrashLoopBackOff and OOMKilled states.",
+                "command": "kubectl set resources deployment backend --limits=memory=10Mi -n cloudforge",
+                "expected_outcome": "Pods fail readiness checks and enter CrashLoopBackOff / OOMKilled loop.",
+                "is_required": True
+            },
+            {
+                "step_order": 8,
+                "step_type": "troubleshoot",
+                "title": "Investigate CrashLoopBackOff and Pending Pod Scheduling",
+                "description": "Execute systematic triage using kubectl describe, kubectl logs --previous, and cluster events.",
+                "instructions": "Diagnose pod termination reasons using 'kubectl describe pod' and inspect 'Last State: Terminated Reason: OOMKilled' and probe failure events.",
+                "command": "kubectl get events -n cloudforge --sort-by='.lastTimestamp' | tail -n 20",
+                "expected_outcome": "Identified OOMKilled error code 137 and Unhealthy readiness probe status.",
+                "is_required": True
+            },
+            {
+                "step_order": 9,
+                "step_type": "fix",
+                "title": "Fix Manifests, Secrets, and NetworkPolicy Rules",
+                "description": "Correct resource allocations, repair probe definitions, and apply Calico NetworkPolicies.",
+                "instructions": "Restore memory limits to 256Mi, point readiness probes to port 8000, and apply NetworkPolicy allowing traffic only from Ingress controller.",
+                "command": "kubectl apply -f k8s/fixed-manifests/",
+                "expected_outcome": "All pods recover to 1/1 Running state; traffic flows normally.",
+                "is_required": True
+            },
+            {
+                "step_order": 10,
+                "step_type": "observe",
+                "title": "Add Prometheus Pod Annotations and Grafana Observability",
+                "description": "Annotate deployments for Prometheus metric scraping and inspect pod CPU/memory dashboards.",
+                "instructions": "Add prometheus.io/scrape: 'true' and prometheus.io/port: '8000' annotations to pod templates.",
+                "command": "kubectl get pod -n cloudforge -o jsonpath='{.items[0].metadata.annotations}'",
+                "expected_outcome": "Prometheus discovers target pods and collects latency and request count metrics.",
+                "is_required": True
+            },
+            {
+                "step_order": 11,
+                "step_type": "document",
+                "title": "Document Cluster Topology & Disaster Recovery Runbook",
+                "description": "Author cluster disaster recovery procedures, pod restart steps, and node drain guidelines.",
+                "instructions": "Create docs/k8s-operations-runbook.md covering rolling restarts, scaling policies, and rollback commands.",
+                "command": "cat docs/k8s-operations-runbook.md",
+                "expected_outcome": "Operations runbook documented and committed.",
+                "is_required": True
+            },
+            {
+                "step_order": 12,
+                "step_type": "test",
+                "title": "Complete Final Zero-Downtime Rolling Update Verification",
+                "description": "Perform rolling update while executing continuous HTTP load test to verify 0 dropped connections.",
+                "instructions": "Run Apache Bench (ab) or hey load test while executing 'kubectl rollout restart deployment backend -n cloudforge'. Verify zero HTTP 5xx responses.",
+                "command": "kubectl rollout status deployment/backend -n cloudforge",
+                "expected_outcome": "Zero-downtime rolling update succeeds with 100% 200 OK responses.",
+                "is_required": True
+            }
+        ]
+    },
+    {
+        "slug": "gitops-deployment-platform",
+        "title": "GitOps Deployment Platform",
+        "short_description": "Establish automated GitOps continuous delivery with Argo CD, Helm charts, and canary rollouts.",
+        "description": "Implement enterprise GitOps delivery on Kubernetes. Package complex microservices into modular Helm charts with dynamic value overrides. Configure Argo CD to synchronize cluster state automatically from Git repositories. Implement automated drift detection, self-healing reconciliation, and progressive canary deployments using Argo Rollouts and Prometheus metrics analysis.",
+        "difficulty": "Advanced",
+        "estimated_hours": "18 hours",
+        "status": "published",
+        "featured": False,
+        "technologies": ["Argo CD", "GitOps", "Helm", "Kubernetes", "Argo Rollouts", "Prometheus", "Git"],
+        "deliverables": [
+            "Modular Helm chart with values.yaml, templates, and helpers (charts/cloudforge)",
+            "Argo CD Application and App-of-Apps manifests (gitops/applications.yaml)",
+            "Automated sync policy with self-heal and pruning enabled",
+            "Argo Rollouts Canary configuration with AnalysisTemplate testing error rates",
+            "GitOps disaster recovery and rollback procedure documentation"
+        ],
+        "prerequisites": [
+            "Kubernetes Production Deployment project",
+            "GitOps with Argo CD course",
+            "Understanding of Helm templating and Kubernetes CRDs"
+        ],
+        "learning_objectives": [
+            "Package cloud-native applications into parameterized Helm charts",
+            "Install and manage Argo CD custom resources (Application, AppProject, ApplicationSet)",
+            "Enforce declarative Single Source of Truth where Git drives all cluster changes",
+            "Configure progressive canary delivery with automated rollback upon metric degradation",
+            "Troubleshoot GitOps synchronization drift, out-of-sync states, and hook execution failures"
+        ],
+        "architecture_overview": "Git repositories serve as the sole source of truth. Argo CD runs inside the Kubernetes cluster, monitoring the target Git repository for commits. When changes occur, Argo CD synchronizes the cluster state. Argo Rollouts manages progressive traffic shifting (20% -> 50% -> 100%) verified by Prometheus analysis.",
+        "repository_url": "https://github.com/cloudforge/gitops-deployment-platform",
+        "documentation_url": "https://docs.cloudforge.io/projects/gitops-platform",
+        "course_slugs": ["gitops-with-argo-cd", "kubernetes-engineering"],
+        "skill_slugs": ["gitops", "kubernetes", "helm", "cicd"],
+        "resources": [
+            {
+                "title": "Argo CD Official Architecture Guide",
+                "resource_type": "documentation",
+                "url": "https://argo-cd.readthedocs.io/en/stable/core_concepts/",
+                "description": "Core concepts of Argo CD: Applications, Projects, and Reconciliation Loops.",
+                "display_order": 1
+            },
+            {
+                "title": "Argo Rollouts Progressive Delivery",
+                "resource_type": "tutorial",
+                "url": "https://argoproj.github.io/argo-rollouts/",
+                "description": "Canary and Blue-Green deployment patterns on Kubernetes.",
+                "display_order": 2
+            }
+        ],
+        "steps": [
+            {
+                "step_order": 1,
+                "step_type": "learn",
+                "title": "Learn GitOps Principles and Declarative State Synchronization",
+                "description": "Study the four OpenGitOps principles: Declarative, Versioned & Immutable, Pulled Automatically, and Continuously Reconciled.",
+                "instructions": "Review how pull-based GitOps controllers eliminate the need for exposing cluster API credentials to external CI runners.",
+                "command": "helm version && argocd version --client",
+                "expected_outcome": "Helm 3 and Argo CD CLI installed and verified.",
+                "is_required": True
+            },
+            {
+                "step_order": 2,
+                "step_type": "build",
+                "title": "Package Kubernetes Applications into Modular Helm Charts",
+                "description": "Build parameterized Helm charts supporting multiple environment value overlays (staging, production).",
+                "instructions": "Create charts/cloudforge containing templates for Deployment, Service, Ingress, and HPA. Add values-staging.yaml and values-production.yaml.",
+                "command": "helm lint charts/cloudforge && helm template test charts/cloudforge",
+                "expected_outcome": "Chart passes linting and renders valid Kubernetes manifests.",
+                "is_required": True
+            },
+            {
+                "step_order": 3,
+                "step_type": "configure",
+                "title": "Install and Configure Argo CD on Kubernetes Cluster",
+                "description": "Deploy Argo CD controller, API server, and repository server components into 'argocd' namespace.",
+                "instructions": "Apply the official Argo CD manifests and configure admin credentials and RBAC projects.",
+                "command": "kubectl create namespace argocd && kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml",
+                "expected_outcome": "All Argo CD pods running in 'argocd' namespace.",
+                "is_required": True
+            },
+            {
+                "step_order": 4,
+                "step_type": "deploy",
+                "title": "Connect Git Repositories and Define Argo CD Applications",
+                "description": "Define declarative Application CRDs pointing to the Helm chart repository path.",
+                "instructions": "Create gitops/staging-app.yaml pointing to targetRevision: HEAD and path: charts/cloudforge. Apply manifest to cluster.",
+                "command": "kubectl apply -f gitops/staging-app.yaml",
+                "expected_outcome": "Argo CD discovers application and marks it Healthy and Synced.",
+                "is_required": True
+            },
+            {
+                "step_order": 5,
+                "step_type": "configure",
+                "title": "Configure Automated Synchronization, Self-Healing, and Pruning",
+                "description": "Enable automated syncPolicy with selfHeal: true and prune: true.",
+                "instructions": "Update syncPolicy to enable automated reconciliation with automated pruning of orphaned resources.",
+                "command": "argocd app set cloudforge-staging --sync-policy automated --auto-prune --self-heal",
+                "expected_outcome": "Application sync policy updated; continuous reconciliation active.",
+                "is_required": True
+            },
+            {
+                "step_order": 6,
+                "step_type": "break",
+                "title": "Intentionally Induce Cluster State Drift via Manual kubectl Edits",
+                "description": "Manually mutate live pod replica count and edit environment variables directly in the cluster.",
+                "instructions": "Run 'kubectl scale deployment backend --replicas=10 -n staging' to introduce drift from the declared Git state (3 replicas).",
+                "command": "kubectl scale deployment backend --replicas=10 -n staging",
+                "expected_outcome": "Cluster state diverges from Git repository, triggering OutOfSync state in Argo CD.",
+                "is_required": True
+            },
+            {
+                "step_order": 7,
+                "step_type": "troubleshoot",
+                "title": "Investigate OutOfSync and Degraded Application States in Argo CD",
+                "description": "Inspect Argo CD web UI and CLI diff to identify the exact field drift between live and target state.",
+                "instructions": "Execute 'argocd app diff cloudforge-staging' to examine the difference between live cluster state and declared Git state.",
+                "command": "argocd app diff cloudforge-staging",
+                "expected_outcome": "Diff clearly highlights replica count divergence (10 live vs 3 declared in Git).",
+                "is_required": True
+            },
+            {
+                "step_order": 8,
+                "step_type": "fix",
+                "title": "Fix Manifest Discrepancies and Trigger Automated Self-Healing",
+                "description": "Verify that Argo CD automatically reconciles and restores cluster state to match Git.",
+                "instructions": "Observe self-heal controller resetting live replicas back to 3 without human intervention.",
+                "command": "argocd app get cloudforge-staging",
+                "expected_outcome": "Application returns to Synced and Healthy status; live replicas restored to 3.",
+                "is_required": True
+            },
+            {
+                "step_order": 9,
+                "step_type": "deploy",
+                "title": "Configure Argo Rollouts Canary Releases with AnalysisTemplates",
+                "description": "Implement progressive canary rollout with automated Prometheus metric health checks.",
+                "instructions": "Define Rollout resource with canary steps (setWeight: 20, pause: 5m, setWeight: 50, pause: 5m). Attach AnalysisTemplate checking HTTP 5xx error rate < 1%.",
+                "command": "kubectl apply -f gitops/rollout-canary.yaml",
+                "expected_outcome": "Argo Rollouts controller orchestrates canary traffic split and automated metric evaluation.",
+                "is_required": True
+            },
+            {
+                "step_order": 10,
+                "step_type": "document",
+                "title": "Document GitOps Repository Structure and Branch Promotion Strategy",
+                "description": "Produce engineering documentation detailing Git branching, Helm version bumps, and promotion workflows.",
+                "instructions": "Author docs/gitops-guide.md covering repository layouts, Helm release tagging, and emergency rollback procedures.",
+                "command": "cat docs/gitops-guide.md",
+                "expected_outcome": "GitOps documentation committed to repository.",
+                "is_required": True
+            }
+        ]
+    },
+    {
+        "slug": "devsecops-pipeline",
+        "title": "DevSecOps Pipeline",
+        "short_description": "Embed automated security scanning, SBOM generation, image signing, and admission control across the delivery lifecycle.",
+        "description": "Implement a holistic, shift-left DevSecOps automation pipeline. Integrate pre-commit secret detection with Gitleaks, Static Application Security Testing (SAST) with Semgrep, Software Bill of Materials (SBOM) generation with Syft, vulnerability scanning with Trivy, cryptographic container image signing with Cosign, and Kubernetes admission control policies with Kyverno.",
+        "difficulty": "Advanced",
+        "estimated_hours": "16 hours",
+        "status": "published",
+        "featured": True,
+        "technologies": ["Semgrep", "Gitleaks", "Syft", "Cosign", "Kyverno", "Trivy", "GitHub Actions", "Kubernetes"],
+        "deliverables": [
+            "Multi-stage DevSecOps CI workflow (.github/workflows/security-gate.yml)",
+            "Custom Semgrep SAST rulepack detecting OWASP Top 10 vulnerabilities",
+            "Signed CycloneDX Software Bill of Materials (SBOM) artifact",
+            "Cosign keyless image signing configuration with Sigstore Rekor transparency log",
+            "Kyverno admission controller policies blocking unprivileged and unsigned containers"
+        ],
+        "prerequisites": [
+            "DevSecOps Engineering course",
+            "CloudForge CI/CD Pipeline project",
+            "Familiarity with container runtimes and Kubernetes security primitives"
+        ],
+        "learning_objectives": [
+            "Automate secret detection and prevent credential leaks before code enters source control",
+            "Enforce SAST quality gates in CI to catch SQL injections and insecure deserialization",
+            "Generate and attest compliant Software Bill of Materials (SBOM) for supply chain security",
+            "Cryptographically sign container images using Cosign and Sigstore transparency logs",
+            "Enforce Kubernetes Pod Security Standards using Kyverno validating admission policies"
+        ],
+        "architecture_overview": "Pre-commit hooks intercept local secrets. On push, GitHub Actions runs Semgrep SAST and Trivy dependency scans. Built containers are scanned, attested with Syft SBOM, and signed with Cosign. In the Kubernetes cluster, Kyverno validating admission webhooks verify image signatures before allowing pods to schedule.",
+        "repository_url": "https://github.com/cloudforge/devsecops-pipeline",
+        "documentation_url": "https://docs.cloudforge.io/projects/devsecops-pipeline",
+        "course_slugs": ["devsecops-engineering", "cloud-security-compliance"],
+        "skill_slugs": ["devsecops", "cicd", "docker", "kubernetes"],
+        "resources": [
+            {
+                "title": "Sigstore Cosign Documentation",
+                "resource_type": "documentation",
+                "url": "https://docs.sigstore.dev/cosign/overview/",
+                "description": "Guide to keyless signing, verifying attestations, and Rekor transparency logs.",
+                "display_order": 1
+            },
+            {
+                "title": "Kyverno Policy Engine for Kubernetes",
+                "resource_type": "tutorial",
+                "url": "https://kyverno.io/docs/",
+                "description": "Validating, mutating, and generating Kubernetes policies.",
+                "display_order": 2
+            }
+        ],
+        "steps": [
+            {
+                "step_order": 1,
+                "step_type": "learn",
+                "title": "Learn Shift-Left Security Principles & OWASP Top 10 for Cloud Native",
+                "description": "Understand supply chain security standards (SLSA), NIST cybersecurity framework, and shift-left automation.",
+                "instructions": "Study how embedding automated security checks early in developer workflows drastically reduces remediation costs and security debt.",
+                "command": "trivy --version && cosign version",
+                "expected_outcome": "Security scanning and signing toolchains verified.",
+                "is_required": True
+            },
+            {
+                "step_order": 2,
+                "step_type": "configure",
+                "title": "Configure Pre-Commit Hooks & Gitleaks Secret Detection",
+                "description": "Install pre-commit framework and configure Gitleaks regex rules to catch API keys and passwords.",
+                "instructions": "Create .pre-commit-config.yaml with gitleaks hook. Verify that commits containing mock AWS keys or JWT secrets are blocked.",
+                "command": "pre-commit run --all-files",
+                "expected_outcome": "Gitleaks scans codebase and validates absence of committed secrets.",
+                "is_required": True
+            },
+            {
+                "step_order": 3,
+                "step_type": "build",
+                "title": "Implement Semgrep Static Application Security Testing (SAST) in CI",
+                "description": "Integrate Semgrep rulesets in GitHub Actions to detect insecure coding patterns and vulnerabilities.",
+                "instructions": "Add semgrep CI step using 'p/owasp-top-ten' and 'p/r2c-security-audit' rulesets with SARIF output upload to GitHub Security tab.",
+                "command": "semgrep scan --config=auto .",
+                "expected_outcome": "Semgrep scans source code; no high-severity vulnerabilities detected.",
+                "is_required": True
+            },
+            {
+                "step_order": 4,
+                "step_type": "build",
+                "title": "Generate CycloneDX Software Bill of Materials (SBOM) using Syft",
+                "description": "Generate comprehensive dependency inventory for container images in standard CycloneDX JSON format.",
+                "instructions": "Run Syft against the built application container and output cyclonedx-json format SBOM artifact.",
+                "command": "syft cloudforge-app:latest -o cyclonedx-json > sbom.json",
+                "expected_outcome": "Valid CycloneDX SBOM file generated containing all package versions and licenses.",
+                "is_required": True
+            },
+            {
+                "step_order": 5,
+                "step_type": "configure",
+                "title": "Sign Container Images with Cosign and Sigstore Transparency Logs",
+                "description": "Cryptographically sign container images using Cosign and publish attestations to OCI registry.",
+                "instructions": "Generate Cosign keypair (or use OIDC keyless signing) and sign the container image digest. Attach SBOM attestation.",
+                "command": "cosign sign --yes ghcr.io/cloudforge/cloudforge-app@sha256:abcd...",
+                "expected_outcome": "Cosign signature and attestation stored alongside image in container registry.",
+                "is_required": True
+            },
+            {
+                "step_order": 6,
+                "step_type": "configure",
+                "title": "Enforce Kyverno Admission Controller Policies on Kubernetes",
+                "description": "Deploy Kyverno to Kubernetes cluster and create ClusterPolicies requiring image signatures and unprivileged pods.",
+                "instructions": "Apply Kyverno ClusterPolicy requiring 'runAsNonRoot: true', 'readOnlyRootFilesystem: true', and verified Cosign signatures.",
+                "command": "kubectl apply -f k8s/kyverno-policies/",
+                "expected_outcome": "Kyverno ClusterPolicies active in Enforce mode.",
+                "is_required": True
+            },
+            {
+                "step_order": 7,
+                "step_type": "break",
+                "title": "Intentionally Inject Vulnerable NPM Package and Privileged Container Spec",
+                "description": "Simulate supply chain attack by adding an image with critical CVE and deploying an unsigned privileged pod.",
+                "instructions": "Attempt to deploy a pod with 'privileged: true' and 'image: unsigned-image:latest' to the cluster.",
+                "command": "kubectl apply -f k8s/insecure-pod.yaml",
+                "expected_outcome": "Kyverno admission webhook blocks pod creation with validation error (Error: admission webhook denied the request).",
+                "is_required": True
+            },
+            {
+                "step_order": 8,
+                "step_type": "troubleshoot",
+                "title": "Investigate CI Security Gate Failures and Denied Admission Logs",
+                "description": "Examine Kyverno admission reports and Trivy failure logs to audit policy violations.",
+                "instructions": "Inspect Kyverno PolicyReport resources and audit logs to determine the exact policy failure reasons.",
+                "command": "kubectl get policyreports -A -o wide",
+                "expected_outcome": "Policy report identifies root causes: privileged container flag and missing Cosign signature.",
+                "is_required": True
+            },
+            {
+                "step_order": 9,
+                "step_type": "fix",
+                "title": "Fix High-Severity CVEs, Pin Hashes, and Remove Root Privileges",
+                "description": "Update base image, sign fixed container, and apply hardened SecurityContext.",
+                "instructions": "Remove privileged flag, set securityContext.runAsNonRoot=true, sign the rebuilt image, and re-apply deployment manifest.",
+                "command": "kubectl apply -f k8s/secure-pod.yaml",
+                "expected_outcome": "Kyverno admits pod; container successfully starts in compliant state.",
+                "is_required": True
+            },
+            {
+                "step_order": 10,
+                "step_type": "document",
+                "title": "Document Enterprise DevSecOps Standard Operating Procedures",
+                "description": "Author DevSecOps security policies, exemption request processes, and vulnerability SLA timelines.",
+                "instructions": "Create docs/devsecops-policy.md detailing CVE remediation timelines (Critical: 24h, High: 7d) and exception workflows.",
+                "command": "cat docs/devsecops-policy.md",
+                "expected_outcome": "Security policy documentation committed to repository.",
+                "is_required": True
+            }
+        ]
+    },
+    {
+        "slug": "observability-platform",
+        "title": "Observability Platform",
+        "short_description": "Build an enterprise observability stack with Prometheus metrics, Grafana dashboards, Loki log aggregation, and OpenTelemetry tracing.",
+        "description": "Architect a production-grade full-stack observability platform. Deploy Prometheus for high-cardinality metric collection, Grafana for real-time visualization of Service Level Objectives (SLOs), Loki and Promtail for centralized log aggregation, OpenTelemetry SDK for distributed tracing, and Alertmanager for routing alerts to Slack/PagerDuty.",
+        "difficulty": "Intermediate",
+        "estimated_hours": "14 hours",
+        "status": "published",
+        "featured": False,
+        "technologies": ["Prometheus", "Grafana", "Loki", "OpenTelemetry", "Alertmanager", "Jaeger", "Linux"],
+        "deliverables": [
+            "Prometheus configuration with service discovery and recording rules",
+            "Production Grafana dashboard suite (RED method: Rate, Errors, Duration)",
+            "Loki and Promtail centralized logging pipeline with structured labels",
+            "OpenTelemetry distributed tracing instrumentation with trace-to-log correlation",
+            "Alertmanager routing rules with severity escalation and notification templates"
+        ],
+        "prerequisites": [
+            "Observability Engineering course",
+            "DevOps Engineering Foundations",
+            "Basic understanding of HTTP metrics, status codes, and latency distributions"
+        ],
+        "learning_objectives": [
+            "Implement the Four Golden Signals (Latency, Traffic, Errors, Saturation) in Prometheus",
+            "Design actionable Grafana dashboards adhering to the RED and USE monitoring methods",
+            "Configure centralized, cost-effective log ingestion with Loki and LogQL querying",
+            "Instrument distributed services with OpenTelemetry to trace end-to-end request journeys",
+            "Formulate high-signal Alertmanager alert rules to prevent alert fatigue"
+        ],
+        "architecture_overview": "Applications emit Prometheus metrics scraped periodically by Prometheus Server. Pod logs are shipped by Promtail daemonsets into Loki. Distributed request traces are forwarded by OpenTelemetry Collector to Jaeger. Grafana unifies all three telemetry data sources in a single pane of glass.",
+        "repository_url": "https://github.com/cloudforge/observability-platform",
+        "documentation_url": "https://docs.cloudforge.io/projects/observability-platform",
+        "course_slugs": ["observability-engineering", "devops-engineering-foundations"],
+        "skill_slugs": ["observability", "kubernetes", "linux"],
+        "resources": [
+            {
+                "title": "Prometheus Querying & PromQL Guide",
+                "resource_type": "documentation",
+                "url": "https://prometheus.io/docs/prometheus/latest/querying/basics/",
+                "description": "PromQL operators, rate/irate calculations, and histogram percentiles (histogram_quantile).",
+                "display_order": 1
+            },
+            {
+                "title": "OpenTelemetry Instrumentation Concepts",
+                "resource_type": "tutorial",
+                "url": "https://opentelemetry.io/docs/concepts/signals/traces/",
+                "description": "TracerProvider, Spans, Context Propagation, and Exporters.",
+                "display_order": 2
+            }
+        ],
+        "steps": [
+            {
+                "step_order": 1,
+                "step_type": "learn",
+                "title": "Learn The Three Pillars of Observability: Metrics, Logs, and Traces",
+                "description": "Study telemetry data models, high cardinality trade-offs, and distributed context propagation.",
+                "instructions": "Understand how metrics detect problems, logs explain context, and traces isolate exact microservice bottlenecks.",
+                "command": "curl -s http://localhost:9090/-/ready",
+                "expected_outcome": "Prometheus and observability telemetry endpoints active.",
+                "is_required": True
+            },
+            {
+                "step_order": 2,
+                "step_type": "build",
+                "title": "Deploy Prometheus Server and Node Exporter DaemonSet",
+                "description": "Install Prometheus with kubernetes service discovery and node-level system metrics.",
+                "instructions": "Deploy Prometheus and Node Exporter. Configure prometheus.yml scrape configs for pods, nodes, and endpoints.",
+                "command": "kubectl get pods -n monitoring",
+                "expected_outcome": "Prometheus server and Node Exporter daemonset running healthy.",
+                "is_required": True
+            },
+            {
+                "step_order": 3,
+                "step_type": "build",
+                "title": "Instrument Microservices with OpenTelemetry SDK",
+                "description": "Add OpenTelemetry auto-instrumentation to backend microservices for distributed trace collection.",
+                "instructions": "Configure OpenTelemetry SDK in backend service to export spans to OpenTelemetry Collector over OTLP gRPC protocol.",
+                "command": "curl -s http://localhost:8000/api/users",
+                "expected_outcome": "API request generates trace ID injected into HTTP headers and exported to Jaeger.",
+                "is_required": True
+            },
+            {
+                "step_order": 4,
+                "step_type": "configure",
+                "title": "Deploy Grafana and Build Service Level Objective (SLO) Dashboards",
+                "description": "Provision Grafana datasources and build dashboards visualizing p50, p95, p99 latency histograms and error rates.",
+                "instructions": "Import declarative Grafana dashboards via ConfigMaps. Create panels for Request Rate (RPS), HTTP 5xx Error Ratio, and Latency Percentiles.",
+                "command": "curl -s -u admin:admin http://localhost:3000/api/health",
+                "expected_outcome": "Grafana healthy and dashboard displaying live real-time metrics.",
+                "is_required": True
+            },
+            {
+                "step_order": 5,
+                "step_type": "configure",
+                "title": "Configure Promtail and Grafana Loki for Centralized Log Aggregation",
+                "description": "Deploy Loki log store and Promtail agent to stream container logs with pod metadata labels.",
+                "instructions": "Configure Loki retention and Promtail pipeline stages to parse JSON log formats and extract trace_id labels.",
+                "command": "kubectl get statefulset -n monitoring loki",
+                "expected_outcome": "Loki ingesting logs with sub-second query latency via LogQL.",
+                "is_required": True
+            },
+            {
+                "step_order": 6,
+                "step_type": "configure",
+                "title": "Configure Alertmanager Rules for High Error Rates and Latency Spikes",
+                "description": "Author Prometheus alert rules evaluating SLO error budgets and route to Alertmanager receivers.",
+                "instructions": "Define alerts: HighErrorRate (>5% for 5m) and ServiceDegraded (p99 latency > 1000ms for 5m).",
+                "command": "promtool check rules alerts/service-alerts.yaml",
+                "expected_outcome": "Alert rules syntax validated successfully.",
+                "is_required": True
+            },
+            {
+                "step_order": 7,
+                "step_type": "break",
+                "title": "Intentionally Induce High Latency and HTTP 500 Error Storms",
+                "description": "Simulate database connection pool starvation and slow query cascades under load.",
+                "instructions": "Inject artificial 2000ms database delay and lock connection pool at 1 max connection, then send concurrent traffic.",
+                "command": "hey -n 1000 -c 50 http://localhost:8000/api/slow-endpoint",
+                "expected_outcome": "P99 latency spikes above 2000ms, error rate climbs to 15%, and Alertmanager triggers firing alert.",
+                "is_required": True
+            },
+            {
+                "step_order": 8,
+                "step_type": "troubleshoot",
+                "title": "Investigate Distributed Trace Spans and Correlate Logs with Metrics",
+                "description": "Use trace ID from failing request to inspect span waterfall in Jaeger and correlate with Loki logs.",
+                "instructions": "Locate slowest trace span in Jaeger. Verify that 95% of execution time was spent waiting on DB connection pool acquisition.",
+                "command": "logcli query '{app=\"backend\"} |= \"error\"' --since=15m",
+                "expected_outcome": "Root cause pinpointed: database connection pool exhaustion in database layer.",
+                "is_required": True
+            },
+            {
+                "step_order": 9,
+                "step_type": "fix",
+                "title": "Fix Upstream Database Connection Pool Exhaustion",
+                "description": "Tune connection pool parameters, add index on slow query table, and resolve latency bottleneck.",
+                "instructions": "Increase DB connection pool max_size to 20, configure connection timeout, and add missing database index.",
+                "command": "hey -n 1000 -c 50 http://localhost:8000/api/slow-endpoint",
+                "expected_outcome": "P99 latency drops below 45ms; error rate returns to 0%; alerts resolve automatically.",
+                "is_required": True
+            },
+            {
+                "step_order": 10,
+                "step_type": "document",
+                "title": "Document SRE On-Call Playbook & Alert Routing Topology",
+                "description": "Produce on-call runbook documenting alert triage steps, escalation paths, and dashboard URLs.",
+                "instructions": "Create docs/on-call-playbook.md detailing triage steps for each firing Alertmanager alert.",
+                "command": "cat docs/on-call-playbook.md",
+                "expected_outcome": "Playbook documented and committed to repository.",
+                "is_required": True
+            }
+        ]
+    },
+    {
+        "slug": "terraform-aws-infrastructure",
+        "title": "Terraform AWS Infrastructure",
+        "short_description": "Provision scalable, highly available AWS infrastructure using Terraform modules, remote state locking, and CI automation.",
+        "description": "Architect and provision enterprise multi-tier AWS cloud infrastructure using Terraform. Implement S3 remote backend with DynamoDB state locking, reusable modular VPC (public, private, database subnets across 3 AZs), NAT Gateways, EKS Kubernetes cluster with managed node groups, RDS PostgreSQL database, and automated IaC testing with tfsec and tflint in CI.",
+        "difficulty": "Intermediate",
+        "estimated_hours": "15 hours",
+        "status": "published",
+        "featured": True,
+        "technologies": ["Terraform", "AWS", "EKS", "VPC", "RDS", "DynamoDB", "S3", "tfsec", "tflint"],
+        "deliverables": [
+            "Modular Terraform codebase (modules/vpc, modules/eks, modules/rds)",
+            "S3 remote backend configuration with DynamoDB distributed state locking",
+            "Multi-AZ VPC with public/private subnet topology and NAT Gateways",
+            "Amazon EKS Cluster with IAM OIDC provider and autoscaling node groups",
+            "Automated Terraform linting and security scanning pipeline (.github/workflows/terraform.yml)"
+        ],
+        "prerequisites": [
+            "Infrastructure as Code with Terraform course",
+            "Cloud Computing Foundations",
+            "AWS account concepts (IAM, VPC, Subnets, Routing)"
+        ],
+        "learning_objectives": [
+            "Structure clean, DRY Terraform module architectures with strict input/output contracts",
+            "Manage Terraform remote state safely using S3 bucket versioning and DynamoDB distributed locks",
+            "Design resilient multi-AZ networking following AWS Well-Architected guidelines",
+            "Configure IAM least-privilege roles for service accounts (IRSA) on Amazon EKS",
+            "Remediate Terraform state drift, resolve lock contention, and recover from partial apply failures"
+        ],
+        "architecture_overview": "Terraform provisions a 3-tier VPC across 3 Availability Zones. EKS worker nodes run in private application subnets. RDS PostgreSQL runs in isolated database subnets. Traffic enters via an Application Load Balancer in public subnets.",
+        "repository_url": "https://github.com/cloudforge/terraform-aws-infrastructure",
+        "documentation_url": "https://docs.cloudforge.io/projects/terraform-aws",
+        "course_slugs": ["infrastructure-as-code-with-terraform", "cloud-computing-foundations"],
+        "skill_slugs": ["terraform", "aws", "linux"],
+        "resources": [
+            {
+                "title": "Terraform AWS Provider Documentation",
+                "resource_type": "documentation",
+                "url": "https://registry.terraform.io/providers/hashicorp/aws/latest/docs",
+                "description": "Official documentation for all AWS resource blocks and attributes.",
+                "display_order": 1
+            },
+            {
+                "title": "AWS Well-Architected Framework: Reliability",
+                "resource_type": "reference",
+                "url": "https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/",
+                "description": "Design principles for multi-AZ fault tolerance and disaster recovery.",
+                "display_order": 2
+            }
+        ],
+        "steps": [
+            {
+                "step_order": 1,
+                "step_type": "learn",
+                "title": "Learn Infrastructure as Code Principles & Terraform State Management",
+                "description": "Understand declarative graph resolution, state snapshots, and resource lifecycle management.",
+                "instructions": "Study how Terraform calculates resource dependency graphs and maps declared HCL configuration to real cloud provider IDs.",
+                "command": "terraform version",
+                "expected_outcome": "Terraform CLI version 1.7+ verified.",
+                "is_required": True
+            },
+            {
+                "step_order": 2,
+                "step_type": "build",
+                "title": "Build S3 Remote Backend with DynamoDB State Locking",
+                "description": "Configure S3 bucket with server-side encryption, versioning, and DynamoDB LockID table.",
+                "instructions": "Author backend.tf with S3 bucket, DynamoDB table name, and encrypt=true. Execute terraform init to migrate state.",
+                "command": "terraform init",
+                "expected_outcome": "Terraform initialized with remote S3 backend and DynamoDB locking active.",
+                "is_required": True
+            },
+            {
+                "step_order": 3,
+                "step_type": "build",
+                "title": "Create Modular Multi-AZ VPC with Public/Private Subnets and NAT Gateways",
+                "description": "Write reusable VPC Terraform module provisioning 10.0.0.0/16 CIDR split across 3 Availability Zones.",
+                "instructions": "Define module with public, private, and database subnet tiers, Internet Gateway, and redundant NAT Gateways.",
+                "command": "terraform plan -target=module.vpc",
+                "expected_outcome": "Terraform plan outputs VPC, subnets, route tables, and NAT Gateway creation plan.",
+                "is_required": True
+            },
+            {
+                "step_order": 4,
+                "step_type": "configure",
+                "title": "Provision Secure Security Groups and IAM Least-Privilege Roles",
+                "description": "Create security groups with minimal required ingress rules and configure IAM roles.",
+                "instructions": "Configure EKS cluster role, node group role, and RDS security group permitting port 5432 ingress only from EKS private subnets.",
+                "command": "terraform plan -target=module.security",
+                "expected_outcome": "Security groups and IAM roles planned with principle of least privilege.",
+                "is_required": True
+            },
+            {
+                "step_order": 5,
+                "step_type": "deploy",
+                "title": "Provision Amazon EKS Kubernetes Cluster and Managed Node Groups",
+                "description": "Deploy managed EKS control plane (version 1.29) and autoscaling node groups in private subnets.",
+                "instructions": "Author modules/eks using aws_eks_cluster and aws_eks_node_group with t3.medium instances (min: 2, max: 6).",
+                "command": "terraform plan -target=module.eks",
+                "expected_outcome": "EKS cluster and node group resources planned accurately.",
+                "is_required": True
+            },
+            {
+                "step_order": 6,
+                "step_type": "deploy",
+                "title": "Provision Multi-AZ RDS PostgreSQL Instance with Automated Backups",
+                "description": "Create RDS PostgreSQL database with multi_az=true, automated backups, and storage autoscaling.",
+                "instructions": "Configure aws_db_instance with postgres engine 16, db_subnet_group_name pointing to database subnets, and storage_encrypted=true.",
+                "command": "terraform plan -target=module.rds",
+                "expected_outcome": "RDS instance plan configured with multi-AZ replication and encryption enabled.",
+                "is_required": True
+            },
+            {
+                "step_order": 7,
+                "step_type": "break",
+                "title": "Intentionally Break State Lock and Induce CIDR Overlap Conflict",
+                "description": "Simulate state lock deadlock and CIDR block collisions across module boundaries.",
+                "instructions": "Inject a conflicting subnet CIDR block overlapping with existing VPC allocations and simulate orphaned DynamoDB lock.",
+                "command": "terraform validate && terraform plan",
+                "expected_outcome": "Terraform plan fails with CIDR block overlap conflict and state lock acquisition timeout.",
+                "is_required": True
+            },
+            {
+                "step_order": 8,
+                "step_type": "troubleshoot",
+                "title": "Troubleshoot Terraform Plan Errors and Target Specific Resource Drift",
+                "description": "Use terraform force-unlock and terraform state list to diagnose and clear lock contention.",
+                "instructions": "Inspect DynamoDB lock table to find the lock ID, release lock safely, and use cidrsubnet() function to prevent IP overlaps.",
+                "command": "terraform force-unlock <LOCK_ID> || terraform state list",
+                "expected_outcome": "State lock released safely and CIDR allocation math resolved.",
+                "is_required": True
+            },
+            {
+                "step_order": 9,
+                "step_type": "fix",
+                "title": "Fix Dependency Graph, Subnet Route Associations, and Security Group Ingress",
+                "description": "Refactor subnet calculations using cidrsubnet() and ensure explicit depends_on on route associations.",
+                "instructions": "Use cidrsubnet(var.vpc_cidr, 4, index) for deterministic subnet IP slicing. Fix route table association dependencies.",
+                "command": "terraform plan",
+                "expected_outcome": "Terraform plan shows clean, error-free execution plan with 0 warnings.",
+                "is_required": True
+            },
+            {
+                "step_order": 10,
+                "step_type": "automate",
+                "title": "Automate Terraform Linting (tflint), Security Scans (tfsec), and CI Pipeline",
+                "description": "Embed automated formatting (terraform fmt -check), tflint, and tfsec into GitHub Actions.",
+                "instructions": "Create .github/workflows/terraform.yml running fmt check, tflint, and tfsec with PR comment of plan summary.",
+                "command": "tflint && tfsec .",
+                "expected_outcome": "Linting and security scan pass with zero high-severity findings.",
+                "is_required": True
+            },
+            {
+                "step_order": 11,
+                "step_type": "document",
+                "title": "Document Infrastructure Topology and Cost Optimization Strategies",
+                "description": "Author architectural documentation, module inputs/outputs catalog, and monthly cost breakdown.",
+                "instructions": "Create docs/architecture-topology.md with VPC diagram, resource inventory, and AWS Cost Calculator estimates.",
+                "command": "cat docs/architecture-topology.md",
+                "expected_outcome": "Infrastructure topology documentation committed.",
+                "is_required": True
+            }
+        ]
+    },
+    {
+        "slug": "ai-incident-intelligence-platform",
+        "title": "AI Incident Intelligence Platform",
+        "short_description": "Build an AI-powered SRE copilot that ingests telemetry, retrieves relevant runbooks via RAG, and generates incident root-cause hypotheses.",
+        "description": "Construct an intelligent SRE incident triage and automated runbook platform. Ingest live Kubernetes cluster events and Prometheus alerts via webhook. Leverage pgvector embeddings to retrieve relevant historical post-mortems and architecture runbooks using Retrieval-Augmented Generation (RAG). Synthesize structured root-cause hypotheses, assess blast radius, and generate pull request remediation drafts with human-in-the-loop approval workflows.",
+        "difficulty": "Advanced",
+        "estimated_hours": "20 hours",
+        "status": "published",
+        "featured": True,
+        "technologies": ["Python", "FastAPI", "PostgreSQL", "pgvector", "Kubernetes", "Prometheus", "OpenAI / Gemini", "RAG"],
+        "deliverables": [
+            "Incident ingestion API receiving Alertmanager webhooks and Kubernetes event streams",
+            "Vector search pipeline using pgvector for semantic retrieval of SRE runbooks",
+            "Structured LLM diagnostic agent producing root-cause hypotheses and confidence scores",
+            "Human-in-the-loop approval mechanism for automated remediation action execution",
+            "Post-mortem generation pipeline summarizing incident timelines and prevention steps"
+        ],
+        "prerequisites": [
+            "AI + DevOps Engineer Roadmap",
+            "Observability Platform project",
+            "Working knowledge of Python async programming and REST APIs"
+        ],
+        "learning_objectives": [
+            "Build event-driven telemetry ingestion pipelines for real-time alerting",
+            "Implement semantic vector search over internal infrastructure runbooks using pgvector",
+            "Design robust prompt templates enforcing strict JSON schema responses from LLMs",
+            "Construct human-in-the-loop safety boundaries for automated infrastructure remediation",
+            "Evaluate AI triage accuracy against ground-truth incident post-mortems"
+        ],
+        "architecture_overview": "Alertmanager sends alert payloads to the FastAPI incident webhook. The system queries pgvector to find relevant runbook excerpts, constructs an enriched diagnostic prompt for the LLM, and outputs structured root-cause analysis. SRE engineers review and approve the recommended remediation actions.",
+        "repository_url": "https://github.com/cloudforge/ai-incident-intelligence",
+        "documentation_url": "https://docs.cloudforge.io/projects/ai-incident-intelligence",
+        "course_slugs": ["ai-for-cloud-devops", "observability-engineering"],
+        "skill_slugs": ["ai-devops", "python", "kubernetes", "observability"],
+        "resources": [
+            {
+                "title": "pgvector PostgreSQL Extension Documentation",
+                "resource_type": "documentation",
+                "url": "https://github.com/pgvector/pgvector",
+                "description": "Vector indexing, cosine distance (<=>), and L2 distance operators.",
+                "display_order": 1
+            },
+            {
+                "title": "RAG for Technical Operations Guide",
+                "resource_type": "tutorial",
+                "url": "https://docs.cloudforge.io/ai/rag-for-sre",
+                "description": "Strategies for chunking and embedding technical markdown runbooks.",
+                "display_order": 2
+            }
+        ],
+        "steps": [
+            {
+                "step_order": 1,
+                "step_type": "learn",
+                "title": "Learn AI-Assisted SRE Principles & LLM Prompt Engineering for DevOps",
+                "description": "Study prompt engineering techniques (few-shot, chain-of-thought), structured JSON modes, and hallucination reduction.",
+                "instructions": "Explore how grounding LLMs with precise system telemetry and runbook context produces deterministic, actionable root-cause diagnoses.",
+                "command": "python -c 'import openai; print(\"AI SDK Ready\")'",
+                "expected_outcome": "Python environment and AI client dependencies verified.",
+                "is_required": True
+            },
+            {
+                "step_order": 2,
+                "step_type": "build",
+                "title": "Ingest Alertmanager Webhooks and Kubernetes Event Streams",
+                "description": "Build asynchronous FastAPI webhook endpoint parsing Prometheus alert payloads and pod status events.",
+                "instructions": "Create /api/v1/incidents/webhook endpoint that receives Alertmanager JSON payloads, parses labels, and creates an Incident record in PostgreSQL.",
+                "command": "curl -X POST http://localhost:8000/api/v1/incidents/webhook -H 'Content-Type: application/json' -d '{\"alerts\": [{\"status\": \"firing\", \"labels\": {\"alertname\": \"KubePodCrashLooping\", \"namespace\": \"production\"}}]}'",
+                "expected_outcome": "Webhook receives alert and creates an active incident record in database.",
+                "is_required": True
+            },
+            {
+                "step_order": 3,
+                "step_type": "build",
+                "title": "Build Vector Embeddings of Infrastructure Runbooks using pgvector",
+                "description": "Chunk markdown operations runbooks and store vector embeddings in PostgreSQL pgvector table.",
+                "instructions": "Implement runbook indexing script that splits markdown by header, generates 1536-dimensional embeddings, and inserts into 'runbook_embeddings' table.",
+                "command": "python -m app.ai.index_runbooks",
+                "expected_outcome": "All SRE runbooks chunked, embedded, and indexed with IVFFlat cosine index.",
+                "is_required": True
+            },
+            {
+                "step_order": 4,
+                "step_type": "configure",
+                "title": "Construct RAG Retrieval Pipeline for Incident Context Augmentation",
+                "description": "Query pgvector using cosine distance to retrieve top-3 most relevant runbook sections based on alert context.",
+                "instructions": "Author RAG retrieval function executing 'SELECT content FROM runbook_embeddings ORDER BY embedding <=> query_embedding LIMIT 3'.",
+                "command": "python -m app.ai.test_retrieval 'KubePodCrashLooping OOMKilled'",
+                "expected_outcome": "Retrieval accurately returns OOMKilled remediation runbook section.",
+                "is_required": True
+            },
+            {
+                "step_order": 5,
+                "step_type": "configure",
+                "title": "Generate Structured Root-Cause Hypotheses and Blast Radius Estimates",
+                "description": "Prompt LLM with incoming alert telemetry + retrieved runbook context and enforce strict Pydantic JSON schema output.",
+                "instructions": "Construct system prompt requesting root_cause, confidence_score (0.0 - 1.0), affected_services, and recommended_actions list.",
+                "command": "python -m app.ai.diagnose_incident 1",
+                "expected_outcome": "LLM outputs structured JSON diagnostic report with 92% confidence score.",
+                "is_required": True
+            },
+            {
+                "step_order": 6,
+                "step_type": "break",
+                "title": "Intentionally Trigger Cascading Microservice Failure & Memory Leak",
+                "description": "Simulate real-world cascading outage with high error rate and rapid memory leak.",
+                "instructions": "Trigger memory leak in test service causing multiple pods to fail concurrently with HTTP 504 gateway timeouts.",
+                "command": "python scripts/simulate_incident.py --type=cascading-oom",
+                "expected_outcome": "Multiple firing alerts sent to webhook; incident triage pipeline triggered.",
+                "is_required": True
+            },
+            {
+                "step_order": 7,
+                "step_type": "troubleshoot",
+                "title": "Investigate Alert Context and Evaluate AI Diagnostic Accuracy",
+                "description": "Compare AI-generated root-cause diagnosis against actual injected failure conditions.",
+                "instructions": "Inspect AI diagnostic report for the cascading incident. Verify that the agent correctly identified the upstream memory leak as the primary root cause.",
+                "command": "curl -s http://localhost:8000/api/v1/incidents/1/diagnosis",
+                "expected_outcome": "AI diagnosis accurately isolates upstream memory leak as the root cause.",
+                "is_required": True
+            },
+            {
+                "step_order": 8,
+                "step_type": "configure",
+                "title": "Implement Human-in-the-Loop Remediation Approval Workflow",
+                "description": "Build approval gate requiring SRE confirmation before executing automated remediation scripts.",
+                "instructions": "Create endpoint POST /api/v1/incidents/{id}/remediate with status 'pending_approval' requiring authorized user signature.",
+                "command": "curl -X POST http://localhost:8000/api/v1/incidents/1/approve-remediation",
+                "expected_outcome": "Approval recorded with audit log; remediation action queued.",
+                "is_required": True
+            },
+            {
+                "step_order": 9,
+                "step_type": "automate",
+                "title": "Automate Remediation PR Generation and Post-Mortem Incident Summaries",
+                "description": "Generate automated GitHub pull request with Kubernetes memory limit fix and draft Markdown post-mortem.",
+                "instructions": "Execute automated script that creates git branch, updates deployment memory limit, opens PR, and compiles post-mortem summary.",
+                "command": "python -m app.ai.generate_postmortem 1",
+                "expected_outcome": "Markdown post-mortem generated with incident timeline and prevention recommendations.",
+                "is_required": True
+            },
+            {
+                "step_order": 10,
+                "step_type": "document",
+                "title": "Document AI Safety Boundaries, Audit Logging, and Guardrails",
+                "description": "Author enterprise AI governance documentation, prompt injection safeguards, and audit logging standards.",
+                "instructions": "Create docs/ai-safety-guardrails.md detailing human approval requirements, token budget controls, and audit trails.",
+                "command": "cat docs/ai-safety-guardrails.md",
+                "expected_outcome": "AI safety and governance documentation committed.",
+                "is_required": True
+            }
+        ]
+    }
+]
