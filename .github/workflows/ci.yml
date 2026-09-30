@@ -80,3 +80,16 @@ jobs:
 
       - name: Run Semgrep
         run: semgrep scan --config auto
+
+  gitleaks:
+    name: Gitleaks Secret Scan
+    runs-on: ubuntu-latest
+
+    container:
+      image: zricethezav/gitleaks
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Gitleaks
+        run: gitleaks git .
