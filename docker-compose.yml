@@ -43,6 +43,8 @@ services:
     environment:
       - ENVIRONMENT=development
       - DEBUG=true
+      - POSTGRES_SERVER=postgres
+      - POSTGRES_PORT=5432
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-cloudforge}:${POSTGRES_PASSWORD:-cloudforge_secret_pw}@postgres:5432/${POSTGRES_DB:-cloudforge_db}
       - SECRET_KEY=${SECRET_KEY:-supersecret_cloudforge_dev_jwt_key_change_in_production}
       - BACKEND_CORS_ORIGINS=["http://localhost:5173","http://localhost:3000","http://127.0.0.1:5173"]

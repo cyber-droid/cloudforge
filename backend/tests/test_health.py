@@ -1,6 +1,7 @@
 """
 Tests for Health, Readiness, CORS, and Global Error Handling.
 """
+
 import pytest
 from httpx import AsyncClient
 
@@ -72,7 +73,9 @@ async def test_cors_headers(client: AsyncClient):
         headers={
             "Origin": "http://localhost:5173",
             "Access-Control-Request-Method": "GET",
-        }
+        },
     )
     assert response.status_code == 200
-    assert response.headers.get("access-control-allow-origin") == "http://localhost:5173"
+    assert (
+        response.headers.get("access-control-allow-origin") == "http://localhost:5173"
+    )

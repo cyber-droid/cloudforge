@@ -24,12 +24,15 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.api.deps import get_current_user
 from app.api.v1.api import api_router
 from app.api.v1.endpoints.health import health_check, readiness_check
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.logging import logger
+from app.models.user import User
 from app.schemas.common import HealthResponse, ReadinessResponse
+from app.schemas.user import UserResponse
 
 
 @asynccontextmanager
@@ -165,6 +168,18 @@ def create_application() -> FastAPI:
             "ready": "/ready",
             "docs": f"{settings.API_V1_STR}/docs",
         }
+
+    @app.get(
+        "/me",
+        response_model=UserResponse,
+        tags=["Authentication"],
+        summary="Get Current User",
+    )
+    async def root_me(
+        current_user: User = Depends(get_current_user),
+    ) -> UserResponse:
+        """Return currently authenticated user ID, email, and role."""
+        return UserResponse.model_validate(current_user)
 
     # --------------------------------------------------------------------------
     # 4. Mount Versioned API Routes

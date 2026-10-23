@@ -60,7 +60,10 @@ class TrainingService:
             if course:
                 pub_modules = [m for m in (course.modules or []) if m.published]
                 pub_lessons = [
-                    lesson for m in pub_modules for lesson in (m.lessons or []) if lesson.published
+                    lesson
+                    for m in pub_modules
+                    for lesson in (m.lessons or [])
+                    if lesson.published
                 ]
                 total_lessons = len(pub_lessons)
 
@@ -84,7 +87,11 @@ class TrainingService:
                         )
                     }
                     completed_lessons = len(
-                        [lesson for lesson in pub_lessons if lesson.id in completed_lesson_ids]
+                        [
+                            lesson
+                            for lesson in pub_lessons
+                            if lesson.id in completed_lesson_ids
+                        ]
                     )
                     if total_lessons > 0:
                         prog = round((completed_lessons / total_lessons) * 100.0, 1)
@@ -198,7 +205,10 @@ class TrainingService:
             if course:
                 pub_modules = [m for m in (course.modules or []) if m.published]
                 pub_lessons = [
-                    lesson for m in pub_modules for lesson in (m.lessons or []) if lesson.published
+                    lesson
+                    for m in pub_modules
+                    for lesson in (m.lessons or [])
+                    if lesson.published
                 ]
                 total_modules = len(pub_modules)
                 total_lessons = len(pub_lessons)
@@ -219,12 +229,18 @@ class TrainingService:
                     )
                 }
                 completed_lessons = len(
-                    [lesson for lesson in pub_lessons if lesson.id in completed_lesson_ids]
+                    [
+                        lesson
+                        for lesson in pub_lessons
+                        if lesson.id in completed_lesson_ids
+                    ]
                 )
 
                 # Check completed modules
                 for mod in pub_modules:
-                    mod_lessons = [lesson for lesson in (mod.lessons or []) if lesson.published]
+                    mod_lessons = [
+                        lesson for lesson in (mod.lessons or []) if lesson.published
+                    ]
                     if mod_lessons and all(
                         lesson.id in completed_lesson_ids for lesson in mod_lessons
                     ):

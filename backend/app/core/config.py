@@ -74,6 +74,7 @@ class Settings(BaseSettings):
             return [str(i).rstrip("/") for i in v]
         elif isinstance(v, str):
             import json
+
             return [str(i).rstrip("/") for i in json.loads(v)]
         raise ValueError("Invalid CORS origins")
 

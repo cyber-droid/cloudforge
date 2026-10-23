@@ -20,7 +20,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional, Tuple, Union
 
 import jwt
-from passlib.context import CryptContext
+from passlib.context import CryptContext  # type: ignore[import-untyped]
 
 from app.core.config import settings
 

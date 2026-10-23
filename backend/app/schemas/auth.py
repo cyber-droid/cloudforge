@@ -20,7 +20,7 @@ class RegisterRequest(BaseModel):
         max_length=128,
         description="Plaintext password, minimum 8 chars",
     )
-    name: str = Field(..., min_length=2, max_length=100)
+    name: Optional[str] = Field(default=None, max_length=100)
     role: Optional[UserRole] = UserRole.STUDENT
     learning_goal: Optional[str] = Field(default=None, max_length=100)
 

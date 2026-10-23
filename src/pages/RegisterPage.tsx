@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { User, Mail, Lock, ArrowRight, Check } from 'lucide-react'
 import { Button } from '../components/common/Button'
@@ -14,9 +14,15 @@ export function RegisterPage() {
   const [selectedGoal, setSelectedGoal] = useState('DevOps')
   const [loading, setLoading] = useState(false)
 
-  const { login } = useAuth()
+  const { register, isAuthenticated } = useAuth()
   const { showToast } = useToast()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard', { replace: true })
+    }
+  }, [isAuthenticated, navigate])
 
   const learningGoals = [
     { id: 'Cloud', label: 'Cloud Computing', icon: '☁️', desc: 'AWS & Azure infrastructure architecture' },
@@ -28,19 +34,36 @@ export function RegisterPage() {
     { id: 'Certification', label: 'Certification Prep', icon: '🏆', desc: 'AWS, Azure & Kubernetes exam readiness' },
   ]
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!email.trim() || !password) {
+      showToast('Missing fields', 'Please enter your email and password.', 'error')
+      return
+    }
     if (password !== confirmPassword) {
       showToast('Password mismatch', 'Please ensure both passwords match.', 'error')
       return
     }
+    if (password.length < 8) {
+      showToast('Password too short', 'Password must be at least 8 characters long.', 'error')
+      return
+    }
 
-    setLoading(true)
-    setTimeout(() => {
-      login(email)
+    try {
+      setLoading(true)
+      await register({
+        email: email.trim(),
+        password,
+        name: name.trim() || undefined,
+        learning_goal: selectedGoal,
+      })
       showToast('Account Created!', `Personalized learning track initialized for ${selectedGoal}.`, 'success')
       navigate('/dashboard')
-    }, 600)
+    } catch (err: any) {
+      showToast('Registration Failed', err.message || 'Could not create account.', 'error')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (

@@ -4,8 +4,9 @@ Aggregated API v1 Router.
 Combines all sub-routers for CloudForge endpoints.
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, status
 
+from app.api.deps import get_current_user
 from app.api.v1.endpoints import (
     auth,
     certificates,
@@ -20,8 +21,25 @@ from app.api.v1.endpoints import (
     trainings,
     users,
 )
+from app.models.user import User
+from app.schemas.user import UserResponse
 
 api_router = APIRouter()
+
+
+@api_router.get(
+    "/me",
+    response_model=UserResponse,
+    status_code=status.HTTP_200_OK,
+    tags=["Authentication"],
+    summary="Get Authenticated User",
+)
+async def get_current_user_info(
+    current_user: User = Depends(get_current_user),
+) -> UserResponse:
+    """Return currently authenticated user ID, email, role, and profile."""
+    return UserResponse.model_validate(current_user)
+
 
 # Core System & Diagnostics
 api_router.include_router(health.router, tags=["System Diagnostics"])

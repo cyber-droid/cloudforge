@@ -9,7 +9,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_optional_current_user
+from app.api.deps import get_current_user, get_optional_current_user
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.auth import (
@@ -20,6 +20,7 @@ from app.schemas.auth import (
     TokenResponse,
 )
 from app.schemas.common import MessageResponse
+from app.schemas.user import UserResponse
 from app.services.auth_service import auth_service
 
 router = APIRouter()
@@ -87,3 +88,17 @@ async def logout(
         db, refresh_token_str=refresh_token_str, user=current_user
     )
     return MessageResponse(message="Successfully logged out.")
+
+
+@router.get(
+    "/me",
+    response_model=UserResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get Authenticated User",
+    description="Returns the currently authenticated user's ID, email, and role.",
+)
+async def get_auth_me(
+    current_user: User = Depends(get_current_user),
+) -> UserResponse:
+    """Return currently authenticated user ID, email, role, and profile."""
+    return UserResponse.model_validate(current_user)

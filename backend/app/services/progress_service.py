@@ -214,7 +214,9 @@ class ProgressService:
             if p.status == LessonProgressStatus.COMPLETED.value
         }
 
-        all_completed = all(lesson.id in completed_lesson_ids for lesson in all_published_lessons)
+        all_completed = all(
+            lesson.id in completed_lesson_ids for lesson in all_published_lessons
+        )
         if all_completed:
             enrollment = await enrollment_repo.get_by_user_and_course(
                 db, user_id=user_id, course_id=course.id

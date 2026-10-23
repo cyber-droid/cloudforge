@@ -60,7 +60,9 @@ class SkillService:
                 description=s.description,
                 category=s.category,
                 target_level=s.target_level,
-                target_level_name=LEVEL_NAMES.get(SkillLevel(s.target_level), "Advanced"),
+                target_level_name=LEVEL_NAMES.get(
+                    SkillLevel(s.target_level), "Advanced"
+                ),
                 trend=s.trend or "+5%",
                 courses_count=len(s.courses or []),
                 related_courses=[
