@@ -1,7 +1,9 @@
 """
 Tests for security utilities (password hashing & JWT).
 """
+
 from datetime import timedelta
+
 from app.core.security import (
     create_access_token,
     decode_access_token,
@@ -14,7 +16,7 @@ def test_password_hashing():
     """Test password hashing and verification."""
     password = "DevOpsStrongPassword123!"
     hashed = get_password_hash(password)
-    
+
     assert hashed != password
     assert verify_password(password, hashed) is True
     assert verify_password("WrongPassword123!", hashed) is False
@@ -26,9 +28,9 @@ def test_jwt_token_generation_and_decode():
     token = create_access_token(
         subject=user_id,
         expires_delta=timedelta(minutes=15),
-        extra_claims={"role": "STUDENT", "email": "student@cloudforge.io"}
+        extra_claims={"role": "STUDENT", "email": "student@cloudforge.io"},
     )
-    
+
     payload = decode_access_token(token)
     assert payload is not None
     assert payload["sub"] == user_id

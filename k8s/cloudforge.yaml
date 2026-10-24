@@ -1,0 +1,87 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cloudforge
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: cloudforge
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: backend
+          image: cloud-forge-backend:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8000
+          env:
+            - name: ENVIRONMENT
+              value: development
+            - name: DEBUG
+              value: "true"
+            - name: DATABASE_URL
+              value: "postgresql+asyncpg://cloudforge:cloudforge_secret_pw@postgres:5432/cloudforge_db"
+            - name: POSTGRES_SERVER
+              value: postgres
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: SECRET_KEY
+              value: "supersecret_cloudforge_dev_jwt_key_change_in_production"
+            - name: BACKEND_CORS_ORIGINS
+              value: '["http://localhost:5173","http://localhost:3000","http://127.0.0.1:5173"]'
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: cloudforge
+spec:
+  selector:
+    app: backend
+  ports:
+    - port: 8000
+      targetPort: 8000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: cloudforge
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: cloud-forge-frontend:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 5173
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: cloudforge
+spec:
+  selector:
+    app: frontend
+  ports:
+    - port: 5173
+      targetPort: 5173

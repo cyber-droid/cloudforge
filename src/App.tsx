@@ -26,6 +26,8 @@ import { AchievementsPage } from './pages/AchievementsPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { SettingsPage } from './pages/SettingsPage'
 
+import { ProtectedRoute } from './components/common/ProtectedRoute'
+
 export function App() {
   const location = useLocation()
   const isLessonPlayer = location.pathname.startsWith('/learn/')
@@ -44,10 +46,24 @@ export function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/courses" element={<CoursesPage />} />
           <Route path="/courses/:courseId" element={<CourseDetailPage />} />
-          <Route path="/learn/:courseId/:lessonId" element={<LessonPlayerPage />} />
+          <Route
+            path="/learn/:courseId/:lessonId"
+            element={
+              <ProtectedRoute>
+                <LessonPlayerPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/roadmaps" element={<RoadmapsPage />} />
           <Route path="/roadmaps/:id" element={<RoadmapDetailPage />} />
           <Route path="/skills" element={<SkillsPage />} />
@@ -59,8 +75,22 @@ export function App() {
           <Route path="/troubleshooting/:id" element={<IncidentDetailPage />} />
           <Route path="/ai" element={<AIEngineeringPage />} />
           <Route path="/achievements" element={<AchievementsPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/settings" element={<SettingsPage />} />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <ProfilePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <SettingsPage />
+              </ProtectedRoute>
+            }
+          />
         </Routes>
       </main>
 

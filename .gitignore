@@ -81,4 +81,6 @@ crash.*.log
 *.tfvars.json
 
 # Docker
-docker-compose.override.yml
+docker-compose.override.ymlcloudforge-backup.dump
+
+/cloudforge-backup.dump

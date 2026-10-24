@@ -25,7 +25,9 @@ class BaseRepository(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
     async def get_by_id(self, db: AsyncSession, id: Any) -> Optional[ModelType]:
         """Fetch a single record by primary key."""
-        result = await db.execute(select(self.model).where(getattr(self.model, "id") == id))  # noqa: B009
+        result = await db.execute(
+            select(self.model).where(self.model.id == id)  # type: ignore[attr-defined]
+        )
         return result.scalars().first()
 
     async def get_multi(

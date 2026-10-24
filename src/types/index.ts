@@ -210,6 +210,8 @@ export interface Achievement {
 }
 
 export interface UserProfile {
+  id?: string
+  email?: string
   name: string
   handle: string
   role: string

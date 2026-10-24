@@ -1,6 +1,7 @@
 """
 Integration Tests for User Profile and Preferences API.
 """
+
 import pytest
 from httpx import AsyncClient
 
@@ -11,13 +12,16 @@ async def test_get_current_user_profile(client: AsyncClient):
     # 1. Register a user
     email = "profile_user@cloudforge.io"
     password = "ProfilePassword123!"
-    reg_resp = await client.post("/api/v1/auth/register", json={
-        "email": email,
-        "password": password,
-        "name": "Alex DevOps",
-        "role": "student",
-        "learning_goal": "Cloud Architect",
-    })
+    reg_resp = await client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": email,
+            "password": password,
+            "name": "Alex DevOps",
+            "role": "student",
+            "learning_goal": "Cloud Architect",
+        },
+    )
     assert reg_resp.status_code == 201
     token = reg_resp.json()["access_token"]
 
@@ -27,8 +31,7 @@ async def test_get_current_user_profile(client: AsyncClient):
 
     # 3. Access /users/me with valid Bearer token -> should succeed with 200
     auth_resp = await client.get(
-        "/api/v1/users/me",
-        headers={"Authorization": f"Bearer {token}"}
+        "/api/v1/users/me", headers={"Authorization": f"Bearer {token}"}
     )
     assert auth_resp.status_code == 200
     user_data = auth_resp.json()
@@ -45,11 +48,14 @@ async def test_update_current_user_preferences(client: AsyncClient):
     # 1. Register a user
     email = "settings_user@cloudforge.io"
     password = "SettingsPassword123!"
-    reg_resp = await client.post("/api/v1/auth/register", json={
-        "email": email,
-        "password": password,
-        "name": "Default Name",
-    })
+    reg_resp = await client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": email,
+            "password": password,
+            "name": "Default Name",
+        },
+    )
     token = reg_resp.json()["access_token"]
 
     # 2. Patch user settings
@@ -63,7 +69,7 @@ async def test_update_current_user_preferences(client: AsyncClient):
     patch_resp = await client.patch(
         "/api/v1/users/me",
         json=patch_payload,
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     )
     assert patch_resp.status_code == 200
     updated_data = patch_resp.json()
@@ -76,8 +82,7 @@ async def test_update_current_user_preferences(client: AsyncClient):
 
     # 3. Confirm GET /users/me reflects the patched changes
     get_resp = await client.get(
-        "/api/v1/users/me",
-        headers={"Authorization": f"Bearer {token}"}
+        "/api/v1/users/me", headers={"Authorization": f"Bearer {token}"}
     )
     assert get_resp.status_code == 200
     assert get_resp.json()["terminal_theme"] == "dracula"
@@ -89,12 +94,15 @@ async def test_role_assignment_and_rbac(client: AsyncClient):
     roles = ["student", "instructor", "admin"]
     for role_name in roles:
         email = f"user_{role_name}@cloudforge.io"
-        reg_resp = await client.post("/api/v1/auth/register", json={
-            "email": email,
-            "password": "RolePassword123!",
-            "name": f"{role_name.capitalize()} User",
-            "role": role_name,
-        })
+        reg_resp = await client.post(
+            "/api/v1/auth/register",
+            json={
+                "email": email,
+                "password": "RolePassword123!",
+                "name": f"{role_name.capitalize()} User",
+                "role": role_name,
+            },
+        )
         assert reg_resp.status_code == 201
         data = reg_resp.json()
         assert data["user"]["role"] == role_name
@@ -102,8 +110,7 @@ async def test_role_assignment_and_rbac(client: AsyncClient):
 
         # Fetch profile
         me_resp = await client.get(
-            "/api/v1/users/me",
-            headers={"Authorization": f"Bearer {token}"}
+            "/api/v1/users/me", headers={"Authorization": f"Bearer {token}"}
         )
         assert me_resp.status_code == 200
         assert me_resp.json()["role"] == role_name

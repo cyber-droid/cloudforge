@@ -2606,9 +2606,13 @@ async def seed_skills_and_roadmaps(db: AsyncSession):
             steps: List[Dict[str, Any]] = r_data.get("steps", [])
             for step_idx, s_info in enumerate(steps):
                 step_course_slug = s_info.get("course_slug")
-                target_course = courses.get(str(step_course_slug)) if step_course_slug else None
+                target_course = (
+                    courses.get(str(step_course_slug)) if step_course_slug else None
+                )
                 step_skill_slug = s_info.get("skill_slug")
-                target_skill = skills_map.get(str(step_skill_slug)) if step_skill_slug else None
+                target_skill = (
+                    skills_map.get(str(step_skill_slug)) if step_skill_slug else None
+                )
 
                 step = RoadmapStep(
                     roadmap_id=roadmap.id,

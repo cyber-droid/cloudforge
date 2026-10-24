@@ -51,9 +51,13 @@ class AuthService:
         # Hash password securely with bcrypt
         hashed_password = get_password_hash(data.password)
 
+        user_name = (
+            data.name.strip() if data.name and data.name.strip() else None
+        ) or data.email.split("@")[0].replace(".", " ").title()
+
         user_create_data = UserCreate(
             email=data.email,
-            name=data.name,
+            name=user_name,
             role=data.role or UserRole.STUDENT,
             learning_goal=data.learning_goal,
             hashed_password=hashed_password,

@@ -11,10 +11,11 @@ Covers:
 - LearningActivity event logging
 - Authorization and user isolation
 """
+
 import pytest
 from httpx import AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import get_password_hash
 from app.models.course import Course, CourseCategory, CourseDifficulty
@@ -22,17 +23,10 @@ from app.models.progress import ActivityType, LearningActivity
 from app.models.project import (
     Project,
     ProjectCourse,
-    ProjectDifficulty,
-    ProjectEnrollmentStatus,
     ProjectResource,
-    ProjectResourceType,
     ProjectSkill,
     ProjectStatus,
     ProjectStep,
-    ProjectStepProgress,
-    StepProgressStatus,
-    StepType,
-    UserProjectEnrollment,
 )
 from app.models.skill import Skill, SkillCategory
 from app.models.user import User, UserRole
@@ -154,7 +148,9 @@ async def sample_project_setup(db_session: AsyncSession):
     db_session.add(res1)
 
     # Connections
-    db_session.add(ProjectCourse(project_id=published_project.id, course_id=k8s_course.id))
+    db_session.add(
+        ProjectCourse(project_id=published_project.id, course_id=k8s_course.id)
+    )
     db_session.add(ProjectSkill(project_id=published_project.id, skill_id=k8s_skill.id))
 
     # 4. Draft Project
@@ -184,7 +180,9 @@ async def sample_project_setup(db_session: AsyncSession):
     }
 
 
-async def get_token_for(client: AsyncClient, email: str, password: str = "SecretPassword123!") -> str:
+async def get_token_for(
+    client: AsyncClient, email: str, password: str = "SecretPassword123!"
+) -> str:
     """Helper to obtain JWT access token."""
     login_resp = await client.post(
         "/api/v1/auth/login",
@@ -195,7 +193,9 @@ async def get_token_for(client: AsyncClient, email: str, password: str = "Secret
 
 
 @pytest.mark.asyncio
-async def test_list_projects_and_filtering(client: AsyncClient, sample_project_setup: dict):
+async def test_list_projects_and_filtering(
+    client: AsyncClient, sample_project_setup: dict
+):
     """Test public and student listing filters only published projects."""
     resp = await client.get("/api/v1/projects")
     assert resp.status_code == 200
@@ -247,7 +247,9 @@ async def test_get_project_detail(client: AsyncClient, sample_project_setup: dic
 
 
 @pytest.mark.asyncio
-async def test_draft_project_access_control(client: AsyncClient, sample_project_setup: dict):
+async def test_draft_project_access_control(
+    client: AsyncClient, sample_project_setup: dict
+):
     """Test draft projects are hidden from students but visible to admins."""
     draft = sample_project_setup["draft_project"]
 
@@ -256,7 +258,9 @@ async def test_draft_project_access_control(client: AsyncClient, sample_project_
     assert resp.status_code == 404
 
     # Admin can view draft
-    admin_token = await get_token_for(client, "admin_user@cloudforge.io", "AdminPassword123!")
+    admin_token = await get_token_for(
+        client, "admin_user@cloudforge.io", "AdminPassword123!"
+    )
     admin_resp = await client.get(
         f"/api/v1/projects/{draft.slug}",
         headers={"Authorization": f"Bearer {admin_token}"},
@@ -356,13 +360,18 @@ async def test_step_progression_progress_derivation_and_completion(
 
     # Verify Activity log for step 1
     step_acts = (
-        await db_session.execute(
-            select(LearningActivity).where(
-                LearningActivity.user_id == student.id,
-                LearningActivity.activity_type == ActivityType.PROJECT_STEP_COMPLETED.value,
+        (
+            await db_session.execute(
+                select(LearningActivity).where(
+                    LearningActivity.user_id == student.id,
+                    LearningActivity.activity_type
+                    == ActivityType.PROJECT_STEP_COMPLETED.value,
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(step_acts) == 1
 
     # 3. Complete Step 2
@@ -391,13 +400,18 @@ async def test_step_progression_progress_derivation_and_completion(
 
     # Verify PROJECT_COMPLETED activity was emitted
     proj_comp_acts = (
-        await db_session.execute(
-            select(LearningActivity).where(
-                LearningActivity.user_id == student.id,
-                LearningActivity.activity_type == ActivityType.PROJECT_COMPLETED.value,
+        (
+            await db_session.execute(
+                select(LearningActivity).where(
+                    LearningActivity.user_id == student.id,
+                    LearningActivity.activity_type
+                    == ActivityType.PROJECT_COMPLETED.value,
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(proj_comp_acts) == 1
 
     # 5. Idempotent re-completion of step 3
@@ -410,13 +424,18 @@ async def test_step_progression_progress_derivation_and_completion(
 
     # No duplicate activity logs emitted
     proj_comp_acts_after = (
-        await db_session.execute(
-            select(LearningActivity).where(
-                LearningActivity.user_id == student.id,
-                LearningActivity.activity_type == ActivityType.PROJECT_COMPLETED.value,
+        (
+            await db_session.execute(
+                select(LearningActivity).where(
+                    LearningActivity.user_id == student.id,
+                    LearningActivity.activity_type
+                    == ActivityType.PROJECT_COMPLETED.value,
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(proj_comp_acts_after) == 1
 
 

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Lock, Mail, ArrowRight } from 'lucide-react'
 import { GithubIcon } from '../components/common/BrandIcons'
@@ -8,29 +8,46 @@ import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 
 export function LoginPage() {
-  const [email, setEmail] = useState('alex.rivera@cloudforge.io')
-  const [password, setPassword] = useState('••••••••••••')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(true)
   const [loading, setLoading] = useState(false)
 
-  const { login } = useAuth()
+  const { login, isAuthenticated } = useAuth()
   const { showToast } = useToast()
   const navigate = useNavigate()
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard', { replace: true })
+    }
+  }, [isAuthenticated, navigate])
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
-    setTimeout(() => {
-      login(email)
-      showToast('Welcome back, Alex!', 'Authenticated to CloudForge Platform session.', 'success')
+    if (!email.trim() || !password) {
+      showToast('Missing credentials', 'Please enter your email and password.', 'error')
+      return
+    }
+
+    try {
+      setLoading(true)
+      await login(email.trim(), password)
+      showToast('Welcome back!', 'Authenticated to CloudForge session.', 'success')
       navigate('/dashboard')
-    }, 600)
+    } catch (err: any) {
+      showToast('Authentication Failed', err.message || 'Invalid email or password.', 'error')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleOAuth = (provider: string) => {
-    login()
-    showToast(`Signed in with ${provider}`, 'Connected via OAuth 2.0 session.', 'success')
-    navigate('/dashboard')
+    showToast(
+      'OAuth Unavailable',
+      `${provider} authentication is not enabled. Please sign in with your email and password.`,
+      'error'
+    )
   }
 
   return (

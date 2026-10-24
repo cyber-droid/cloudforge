@@ -192,8 +192,32 @@ export interface CourseListParams {
   certificate_available?: boolean
 }
 
+export interface ApiUserResponse {
+  id: string
+  email: string
+  name: string
+  role: string
+  avatar_url?: string
+  learning_goal?: string
+  is_active: boolean
+  is_verified?: boolean
+  terminal_theme?: string
+  terminal_font_size?: number
+  email_notifications?: boolean
+  created_at: string
+  updated_at?: string
+}
+
+export interface ApiTokenResponse {
+  access_token: string
+  refresh_token: string
+  token_type: string
+  expires_in: number
+  user: ApiUserResponse
+}
+
 class ApiClient {
-  private getToken(): string | null {
+  public getToken(): string | null {
     return localStorage.getItem('cloudforge_access_token')
   }
 
@@ -207,6 +231,49 @@ class ApiClient {
   public clearTokens() {
     localStorage.removeItem('cloudforge_access_token')
     localStorage.removeItem('cloudforge_refresh_token')
+  }
+
+  // Authentication Endpoints
+  async register(data: { email: string; password: string; name?: string; role?: string; learning_goal?: string }) {
+    const res = await this.request<ApiTokenResponse>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+    if (res.access_token) {
+      this.setTokens(res.access_token, res.refresh_token)
+    }
+    return res
+  }
+
+  async login(data: { email: string; password: string }) {
+    const res = await this.request<ApiTokenResponse>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+    if (res.access_token) {
+      this.setTokens(res.access_token, res.refresh_token)
+    }
+    return res
+  }
+
+  async getMe() {
+    return this.request<ApiUserResponse>('/users/me')
+  }
+
+  async logout() {
+    const refreshToken = localStorage.getItem('cloudforge_refresh_token')
+    try {
+      if (refreshToken) {
+        await this.request('/auth/logout', {
+          method: 'POST',
+          body: JSON.stringify({ refresh_token: refreshToken }),
+        })
+      }
+    } catch {
+      // Ignore network / logout errors
+    } finally {
+      this.clearTokens()
+    }
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {

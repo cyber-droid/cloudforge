@@ -1,10 +1,12 @@
 """
 Integration Tests for Courses, Curriculum, Modules, Lessons, and Enrollment APIs.
 """
+
 import pytest
 from httpx import AsyncClient
-from app.db.seed import seed_courses
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.db.seed import seed_courses
 
 
 @pytest.fixture(autouse=True)
@@ -51,14 +53,17 @@ async def test_search_courses(client: AsyncClient):
     assert search_resp.status_code == 200
     data = search_resp.json()
     assert len(data["items"]) >= 1
-    assert any("terraform" in c["title"].lower() or "terraform" in c["slug"] for c in data["items"])
+    assert any(
+        "terraform" in c["title"].lower() or "terraform" in c["slug"]
+        for c in data["items"]
+    )
 
 
 @pytest.mark.asyncio
 async def test_get_course_detail_and_curriculum(client: AsyncClient):
     """Test retrieving course detail and curriculum tree."""
     slug = "kubernetes-engineering"
-    
+
     # 1. Course Detail
     detail_resp = await client.get(f"/api/v1/courses/{slug}")
     assert detail_resp.status_code == 200
@@ -66,7 +71,7 @@ async def test_get_course_detail_and_curriculum(client: AsyncClient):
     assert detail["slug"] == slug
     assert detail["title"] == "Kubernetes Engineering"
     assert len(detail["modules"]) >= 14
-    
+
     # 2. Course Curriculum
     curr_resp = await client.get(f"/api/v1/courses/{slug}/curriculum")
     assert curr_resp.status_code == 200
@@ -88,11 +93,14 @@ async def test_course_enrollment_lifecycle(client: AsyncClient):
     6. Unenroll
     """
     # 1. Register Student
-    reg_resp = await client.post("/api/v1/auth/register", json={
-        "email": "enrollment_tester@cloudforge.io",
-        "password": "EnrollPassword123!",
-        "name": "Enrollment Student",
-    })
+    reg_resp = await client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "enrollment_tester@cloudforge.io",
+            "password": "EnrollPassword123!",
+            "name": "Enrollment Student",
+        },
+    )
     assert reg_resp.status_code == 201
     token = reg_resp.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
@@ -104,14 +112,18 @@ async def test_course_enrollment_lifecycle(client: AsyncClient):
     assert unauth_resp.status_code == 401
 
     # 3. Authenticated enroll -> should succeed with 201
-    enroll_resp = await client.post(f"/api/v1/courses/{course_slug}/enroll", headers=headers)
+    enroll_resp = await client.post(
+        f"/api/v1/courses/{course_slug}/enroll", headers=headers
+    )
     assert enroll_resp.status_code == 201
     enroll_data = enroll_resp.json()
     assert enroll_data["status"] == "active"
     assert enroll_data["course"]["slug"] == course_slug
 
     # 4. Duplicate enroll -> should fail with 400
-    dup_resp = await client.post(f"/api/v1/courses/{course_slug}/enroll", headers=headers)
+    dup_resp = await client.post(
+        f"/api/v1/courses/{course_slug}/enroll", headers=headers
+    )
     assert dup_resp.status_code == 400
     assert "already enrolled" in dup_resp.json()["message"]
 
@@ -123,12 +135,16 @@ async def test_course_enrollment_lifecycle(client: AsyncClient):
     assert my_courses[0]["course"]["slug"] == course_slug
 
     # 6. Fetch single course enrollment detail
-    single_enroll_resp = await client.get(f"/api/v1/users/me/courses/{course_slug}", headers=headers)
+    single_enroll_resp = await client.get(
+        f"/api/v1/users/me/courses/{course_slug}", headers=headers
+    )
     assert single_enroll_resp.status_code == 200
     assert single_enroll_resp.json()["status"] == "active"
 
     # 7. Unenroll from course
-    unenroll_resp = await client.delete(f"/api/v1/courses/{course_slug}/enroll", headers=headers)
+    unenroll_resp = await client.delete(
+        f"/api/v1/courses/{course_slug}/enroll", headers=headers
+    )
     assert unenroll_resp.status_code == 200
     assert "Successfully unenrolled" in unenroll_resp.json()["message"]
 
